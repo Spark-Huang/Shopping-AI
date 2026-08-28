@@ -45,6 +45,14 @@ class GraphNodes:
             )
             memory_response.raise_for_status()
             memory = memory_response.json()
+
+            semantic_response = requests.get(
+                f"{GraphNodes._config.memory_base_url}/user/{state.user_id}/memory",
+                params={"query": state.query},
+                timeout=3,
+            )
+            semantic_response.raise_for_status()
+            semantic_memory = semantic_response.json()
             
             # Retrieve cart from the memory database
             cart_response = requests.get(
@@ -66,7 +74,7 @@ class GraphNodes:
             )
             
             # Update state with retrieved data
-            state.context = memory["context"]
+            state.context = semantic_memory.get("context") or memory.get("context", "")
             state.cart.contents = cart["cart"]
             state.recent_orders.entries = orders["orders"]
             if PlannerAgent._is_spending_recall_query(state.query):

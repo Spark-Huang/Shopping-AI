@@ -127,10 +127,14 @@ class TestSummaryAgentInvoke:
         out = summary_agent.invoke(state, verbose=False)
 
         assert out.context == "short context"
-        assert len(post_recorder.calls) == 1
-        call = post_recorder.calls[0]
-        assert call.url.endswith("/user/1/context/replace")
-        assert call.payload == {"new_context": "short context"}
+        assert len(post_recorder.calls) == 2
+        assert post_recorder.calls[0].url.endswith("/user/1/context/replace")
+        assert post_recorder.calls[0].payload == {"new_context": "short context"}
+        assert post_recorder.calls[1].url.endswith("/user/1/messages/extract")
+        assert post_recorder.calls[1].payload == {
+            "query": "hi",
+            "response": "",
+        }
 
     def test_long_context_uses_llm_tool_call(
         self, summary_agent: SummaryAgent, post_recorder: _PostRecorder
@@ -142,7 +146,7 @@ class TestSummaryAgentInvoke:
         out = summary_agent.invoke(state, verbose=False)
 
         assert out.context == "summary-of-x-500"
-        assert len(post_recorder.calls) == 1
+        assert len(post_recorder.calls) == 2
         assert post_recorder.calls[0].payload == {"new_context": "summary-of-x-500"}
 
     def test_summarization_preserves_monthly_budget(

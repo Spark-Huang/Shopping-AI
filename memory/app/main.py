@@ -1,7 +1,10 @@
-from fastapi import FastAPI, Header, HTTPException
+import asyncio
+import logging
+import time
 from datetime import UTC, datetime
 from typing import Optional
-import time
+
+from fastapi import FastAPI, Header, HTTPException
 
 from .auth import (
     create_token,
@@ -9,12 +12,16 @@ from .auth import (
     user_id_from_authorization,
     verify_password,
 )
+from .cognee_client import CogneeClient
 from .database import SessionLocal, initialize_database
 from .models import (
     CartItem,
     ContextUpdate,
     ItemUpdate,
     LoginRequest,
+    Message,
+    MessageCreate,
+    MessageExtract,
     Order,
     OrderCreate,
     RegisterRequest,
@@ -24,6 +31,16 @@ from .models import (
 app = FastAPI()
 
 initialize_database()
+
+logger = logging.getLogger(__name__)
+cognee_client = CogneeClient.from_env()
+_background_extraction_tasks: set[asyncio.Future] = set()
+
+
+def _log_extraction_failure(task: asyncio.Future) -> None:
+    exception = task.exception()
+    if exception is not None:
+        logger.error("memory | background cognee extraction failed: %s", exception)
 
 
 def get_db():
@@ -113,6 +130,25 @@ def _order_dict(order: Order) -> dict:
     }
 
 
+def _message_dict(message: Message) -> dict:
+    return {
+        "id": message.id,
+        "user_id": message.user_id,
+        "role": message.role,
+        "content": message.content,
+        "created_at": message.created_at.isoformat() if message.created_at else None,
+    }
+
+
+def _format_context(base_context: str, semantic_memory: list[str]) -> str:
+    long_term_memory = "\n".join(
+        f"Long-term memory: {memory}"
+        for memory in semantic_memory
+        if memory.strip()
+    )
+    return "\n".join(part for part in (base_context, long_term_memory) if part.strip())
+
+
 @app.get("/user/{user_id}")
 async def get_user(user_id: int):
     with SessionLocal() as db:
@@ -151,6 +187,71 @@ async def get_context(user_id: int):
             "user_id": user_id,
             "context": user.context
         }
+
+
+@app.get("/user/{user_id}/memory")
+async def get_semantic_memory(user_id: int, query: str):
+    retrieved = await cognee_client.retrieve(query)
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.id == user_id).first()
+        base_context = user.context if user else ""
+    with SessionLocal() as db:
+        recent_messages = (
+            db.query(Message)
+            .filter(Message.user_id == user_id)
+            .order_by(Message.created_at.desc(), Message.id.desc())
+            .limit(10)
+            .all()
+        )
+    return {
+        "user_id": user_id,
+        "semantic_memory": retrieved,
+        "context": _format_context(base_context, retrieved),
+        "recent_messages": [_message_dict(message) for message in reversed(recent_messages)],
+    }
+
+
+@app.post("/user/{user_id}/messages/extract")
+async def add_and_extract_message(user_id: int, request: MessageExtract):
+    messages = [
+        Message(user_id=user_id, role="user", content=request.query),
+        Message(user_id=user_id, role="assistant", content=request.response),
+    ]
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            db.add(User(id=user_id, context=""))
+        db.add_all(messages)
+        db.commit()
+        message_ids = [message.id for message in messages]
+
+    transcript = f"User {user_id}\nUser: {request.query}\nAssistant: {request.response}"
+    extraction_scheduled = False
+    if cognee_client.settings.embedding_enabled:
+        task = asyncio.create_task(cognee_client.extract(transcript))
+        _background_extraction_tasks.add(task)
+        task.add_done_callback(_background_extraction_tasks.discard)
+        task.add_done_callback(_log_extraction_failure)
+        extraction_scheduled = True
+
+    return {
+        "user_id": user_id,
+        "message_ids": message_ids,
+        "extraction_scheduled": extraction_scheduled,
+    }
+
+
+@app.get("/user/{user_id}/messages")
+async def list_messages(user_id: int):
+    with SessionLocal() as db:
+        messages = (
+            db.query(Message)
+            .filter(Message.user_id == user_id)
+            .order_by(Message.created_at.desc(), Message.id.desc())
+            .limit(200)
+            .all()
+        )
+    return {"user_id": user_id, "messages": [_message_dict(message) for message in reversed(messages)]}
 
 
 @app.post("/user/{user_id}/cart/add")

@@ -1,11 +1,12 @@
 """ORM models and request DTOs for users, cart items, and orders."""
 
-from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import Column, DateTime, Float, Index, Integer, String, Text
-from typing import Optional
 from urllib.parse import urlparse
 from datetime import UTC, datetime
 from math import isfinite
+from typing import Optional
+
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import Column, DateTime, Float, Index, Integer, String, Text
 
 from .database import Base
 
@@ -44,6 +45,18 @@ class Order(Base):
     note = Column(Text, nullable=True)
 
 
+class Message(Base):
+    __tablename__ = "messages"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=False)
+    role = Column(String(16), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    __table_args__ = (
+        Index("ix_messages_user_created", "user_id", "created_at"),
+    )
+
+
 class ContextUpdate(BaseModel):
     new_context: str
 
@@ -66,6 +79,16 @@ class UserInfo(BaseModel):
 class AuthResponse(BaseModel):
     token: str
     user: UserInfo
+
+
+class MessageCreate(BaseModel):
+    role: str = Field(pattern="^(user|assistant)$")
+    content: str = Field(min_length=1, max_length=100000)
+
+
+class MessageExtract(BaseModel):
+    query: str
+    response: str
 
 
 class ItemUpdate(BaseModel):

@@ -66,6 +66,13 @@ def http_recorder(monkeypatch: pytest.MonkeyPatch) -> _HttpRecorder:
         recorder.gets.append({"url": url, "timeout": timeout})
         if url.endswith("/context"):
             return _FakeResponse({"context": "prior chat"})
+        if url.endswith("/memory"):
+            return _FakeResponse(
+                {
+                    "semantic_memory": ["prefers blue dresses"],
+                    "context": "prior chat\nLong-term memory: prefers blue dresses",
+                }
+            )
         if url.endswith("/cart"):
             return _FakeResponse(
                 {"cart": [{"item": "Silk Dress", "amount": 1, "price": 49.99}]}
@@ -107,7 +114,7 @@ class TestGetMemory:
 
         result = await GraphNodes.get_memory(state)
 
-        assert result.context == "prior chat"
+        assert result.context == "prior chat\nLong-term memory: prefers blue dresses"
         assert result.cart.contents == [
             {"item": "Silk Dress", "amount": 1, "price": 49.99}
         ]
@@ -145,6 +152,8 @@ class TestGetMemory:
                         ]
                     }
                 )
+            if url.endswith("/memory"):
+                return _FakeResponse({"semantic_memory": [], "context": ""})
             return _FakeResponse({"context": "", "cart": []})
 
         monkeypatch.setattr(graph_mod.requests, "get", _fake_get)

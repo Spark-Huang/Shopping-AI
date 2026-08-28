@@ -116,7 +116,19 @@ class SummaryAgent:
         else:
             logging.info(f"SummaryAgent.invoke() | Context length is less than memory length -- writing to memory.")
 
-        requests.post(f"{self.memory_base_url}/user/{output_state.user_id}/context/replace", json={"new_context": output_state.context})
+        try:
+            requests.post(
+                f"{self.memory_base_url}/user/{output_state.user_id}/context/replace",
+                json={"new_context": output_state.context},
+                timeout=3,
+            )
+            requests.post(
+                f"{self.memory_base_url}/user/{output_state.user_id}/messages/extract",
+                json={"query": output_state.query, "response": output_state.response},
+                timeout=3,
+            )
+        except requests.RequestException as exc:
+            logging.warning("SummaryAgent.invoke() | message persistence unavailable: %s", exc)
 
         end = time.monotonic()
         output_state.timings["summary"] = end - start

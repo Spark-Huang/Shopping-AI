@@ -45,12 +45,25 @@ services:
     environment:
       MEMORY_DATABASE_URL: sqlite:////data/context.db
       JWT_SECRET: ${JWT_SECRET:-shopping-ai-dev-secret}
+      MEMORY_EMBEDDING_ENABLED: ${MEMORY_EMBEDDING_ENABLED:-true}
+      MILVUS_HOST: milvus
+      MILVUS_PORT: "19530"
+      MEMORY_COGNEE_DATASET: ${MEMORY_COGNEE_DATASET:-shopping_ai_memory}
+      LLM_API_KEY: ${LLM_API_KEY:-omniroute-local}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://llm-gateway:8000/v1}
+      LLM_NAME: ${LLM_NAME:-openrouter/stealth/ox-alpha}
+      EMBED_API_KEY: ${EMBED_API_KEY:-omniroute-local}
+      EMBED_BASE_URL: ${EMBED_BASE_URL:-${LLM_BASE_URL:-http://llm-gateway:8000/v1}}
+      EMBED_NAME: ${EMBED_NAME:-gemini/gemini-embedding-001}
     volumes:
       - memory-data:/data
     ports:
       - "8011:8011"
     networks:
       - shopping-ai
+    depends_on:
+      milvus:
+        condition: service_healthy
 
   safety:
     build:

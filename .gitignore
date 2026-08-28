@@ -26,6 +26,8 @@ tests/.coverage
 search/volumes/
 safety/traces/
 traces/
+.cognee_data/
+.cognee_system/
 
 # Env and local overrides
 .env

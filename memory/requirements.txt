@@ -2,6 +2,7 @@ annotated-types==0.7.0
 anyio==4.13.0
 bcrypt==4.3.0
 click==8.4.2
+cognee[milvus]==0.1.44
 fastapi==0.136.1
 greenlet==3.2.3
 h11==0.16.0
