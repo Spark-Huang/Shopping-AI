@@ -1,6 +1,7 @@
 from nemoguardrails import RailsConfig, LLMRails
 import logging
 import os
+from pathlib import Path
 
 from .endpoint_overrides import apply_endpoint_overrides
 
@@ -50,9 +51,9 @@ class ContentSafety(ContentSafetyBase):
 
 
 # Load configuration
-config_path = os.path.join(
+config_path = Path(
     os.environ.get("SHARED_CONFIG_ROOT", "/app/platform/configs"), "safety"
-)
+).as_posix()
 _content_safety = ContentSafety(config_path)
 
 

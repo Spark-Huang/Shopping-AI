@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import Column, DateTime, Float, Index, Integer, String, Text
 from typing import Optional
 from urllib.parse import urlparse
-from datetime import datetime
+from datetime import UTC, datetime
 from math import isfinite
 
 from .database import Base
@@ -14,6 +14,11 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     context = Column(String, default="")
+    # Auth fields are nullable so legacy demo rows (created before accounts
+    # existed) keep working; the first registration claims such a row.
+    username = Column(String, unique=True, index=True, nullable=True)
+    password_hash = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class CartItem(Base):
@@ -41,6 +46,26 @@ class Order(Base):
 
 class ContextUpdate(BaseModel):
     new_context: str
+
+
+class RegisterRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=32, pattern=r"^[A-Za-z0-9_.-]+$")
+    password: str = Field(min_length=6, max_length=128)
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=32)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class UserInfo(BaseModel):
+    id: int
+    username: str
+
+
+class AuthResponse(BaseModel):
+    token: str
+    user: UserInfo
 
 
 class ItemUpdate(BaseModel):

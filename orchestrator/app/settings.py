@@ -35,7 +35,7 @@ def load_config_with_override(base_config_path: str) -> Dict[str, Any]:
         logger.error(f"Base config file not found at {base_config_path}")
         raise FileNotFoundError(f"Base config file not found at {base_config_path}")
 
-    with open(base_config_path, "r") as f:
+    with open(base_config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
     
     # Check for override config
@@ -47,7 +47,7 @@ def load_config_with_override(base_config_path: str) -> Dict[str, Any]:
         
         if os.path.exists(override_path):
             logger.info(f"Loading override config from {override_path}")
-            with open(override_path, "r") as f:
+            with open(override_path, "r", encoding="utf-8") as f:
                 override_config = yaml.safe_load(f)
             
             # Merge override config into base config

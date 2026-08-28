@@ -13,6 +13,12 @@ afterEach(() => {
 describe("App safety state", () => {
   beforeEach(() => {
     localStorage.clear();
+    // Seed a session so the login gate renders the app shell, not AuthPage.
+    localStorage.setItem(
+      "shopping_auth_user",
+      JSON.stringify({ id: 1, username: "alice" })
+    );
+    localStorage.setItem("shopping_auth_token", "test-token");
   });
 
   it("persists the Me-page toggle", () => {

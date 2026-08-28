@@ -1,5 +1,28 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- User registration, login, and authentication:
+  - memory: `/auth/register`, `/auth/login`, `/auth/me` endpoints (bcrypt password hashing + JWT issuance).
+  - orchestrator: `/auth/*` reverse proxy plus JWT enforcement on `/query/*`, `/cart/*`, `/orders/*`, and `/context/*`.
+  - web: login/register page, token persistence, auth headers on API and SSE requests, account page with logout.
+- `JWT_SECRET` environment variable in `.env.example` and compose.
+
+### Fixed
+
+- orchestrator config loader now opens YAML with `encoding="utf-8"` so non-ASCII configs load correctly on Windows.
+- compose `milvus` service now exposes ports `19530`/`9091` so a locally run `search` can reach Milvus.
+- Docker builds now use the correct service contexts, Python package layout, Node.js 22 runtime, and frontend API variable.
+- Docker build contexts now exclude `.env`, local overrides, virtual environments, databases, and generated dependencies.
+- safety configuration paths are normalized across Windows and Linux, and local overrides no longer leak into container images.
+- timing responses now remain positive on clocks with coarse timer resolution.
+
+### Changed
+
+- `docs/deployment-guide.md`: document `JWT_SECRET` setup and add a 401 troubleshooting note.
+
 ## 0.1.0 - 2026-08-28
 
 ### Added

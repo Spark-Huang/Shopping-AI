@@ -103,6 +103,20 @@
     "favoritesEmpty": "暂无收藏",
     "emptyBrowseHint": "你购买或喜欢的商品会出现在这里——去聊一聊、逛逛商品库吧！",
     "back": "返回",
-    "buyExternal": "前往商家购买"
+    "buyExternal": "前往商家购买",
+    "loggedInAs": "已登录：{{username}}",
+    "logout": "退出登录"
+  },
+  "auth": {
+    "title": "登录",
+    "subtitle": "登录你的 Shopping AI 账号",
+    "usernameLabel": "用户名",
+    "passwordLabel": "密码",
+    "loginButton": "登录",
+    "registerButton": "注册",
+    "switchToLogin": "已有账号？去登录",
+    "switchToRegister": "还没有账号？去注册",
+    "loginFailed": "登录失败，请重试。",
+    "registerFailed": "注册失败，请重试。"
   }
 }

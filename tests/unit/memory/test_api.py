@@ -575,3 +575,113 @@ class TestUserEndpoints:
     def test_clear_missing_user_is_idempotent(self, client: TestClient) -> None:
         response = client.post("/user/1234/clear")
         assert response.status_code == 200
+
+
+class TestAuth:
+    def test_register_creates_account_and_returns_token(
+        self, client: TestClient
+    ) -> None:
+        response = client.post(
+            "/auth/register",
+            json={"username": "alice", "password": "secret123"},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["user"]["username"] == "alice"
+        assert body["user"]["id"] >= 1
+
+        me = client.get("/auth/me", headers={"Authorization": f"Bearer {body['token']}"})
+        assert me.status_code == 200
+        assert me.json()["username"] == "alice"
+
+    def test_first_registration_claims_legacy_demo_user(
+        self, client: TestClient
+    ) -> None:
+        # Seed legacy demo data for user id 1 (pre-auth era).
+        client.post(
+            "/user/1/cart/add",
+            json={"item": "Silk Dress", "amount": 1, "price": 49.9},
+        )
+
+        response = client.post(
+            "/auth/register",
+            json={"username": "alice", "password": "secret123"},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["user"]["id"] == 1
+
+        # The legacy cart carried over to the claimed account.
+        cart = client.get("/user/1/cart").json()
+        assert cart["cart"][0]["item"] == "Silk Dress"
+
+    def test_second_registration_creates_a_new_user(
+        self, client: TestClient
+    ) -> None:
+        first = client.post(
+            "/auth/register", json={"username": "alice", "password": "secret123"}
+        )
+        second = client.post(
+            "/auth/register", json={"username": "bob", "password": "secret456"}
+        )
+        assert first.json()["user"]["id"] == 1
+        assert second.json()["user"]["id"] != 1
+
+    def test_register_duplicate_username_returns_409(
+        self, client: TestClient
+    ) -> None:
+        client.post("/auth/register", json={"username": "alice", "password": "secret123"})
+        response = client.post(
+            "/auth/register", json={"username": "alice", "password": "secret456"}
+        )
+        assert response.status_code == 409
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"username": "ab", "password": "secret123"},  # username too short
+            {"username": "alice", "password": "short"},  # password too short
+            {"username": "bad name!", "password": "secret123"},  # invalid chars
+        ],
+    )
+    def test_register_rejects_invalid_payloads(
+        self, client: TestClient, payload: dict
+    ) -> None:
+        response = client.post("/auth/register", json=payload)
+        assert response.status_code == 422
+
+    def test_login_returns_token_for_valid_credentials(
+        self, client: TestClient
+    ) -> None:
+        client.post("/auth/register", json={"username": "alice", "password": "secret123"})
+
+        response = client.post(
+            "/auth/login", json={"username": "alice", "password": "secret123"}
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["user"]["username"] == "alice"
+
+        me = client.get("/auth/me", headers={"Authorization": f"Bearer {body['token']}"})
+        assert me.status_code == 200
+
+    def test_login_rejects_wrong_password(self, client: TestClient) -> None:
+        client.post("/auth/register", json={"username": "alice", "password": "secret123"})
+
+        response = client.post(
+            "/auth/login", json={"username": "alice", "password": "wrongpass"}
+        )
+        assert response.status_code == 401
+
+    def test_login_rejects_unknown_user(self, client: TestClient) -> None:
+        response = client.post(
+            "/auth/login", json={"username": "nobody", "password": "whatever1"}
+        )
+        assert response.status_code == 401
+
+    def test_me_without_token_returns_401(self, client: TestClient) -> None:
+        assert client.get("/auth/me").status_code == 401
+
+    def test_me_with_garbage_token_returns_401(self, client: TestClient) -> None:
+        response = client.get("/auth/me", headers={"Authorization": "Bearer garbage"})
+        assert response.status_code == 401

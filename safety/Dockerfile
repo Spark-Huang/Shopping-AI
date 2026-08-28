@@ -5,13 +5,15 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install dependencies
-COPY ./requirements.txt .
+COPY safety/requirements.txt .
 RUN apt-get update && apt-get install -y gcc g++ python3-dev
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy app code
-COPY ./app ./app
+COPY safety/app ./app
 COPY ./platform/configs/safety ./platform/configs/safety
+
+ENV PYTHONPATH=/app:/app/platform/configs/safety
 
 # Expose port
 EXPOSE 8012

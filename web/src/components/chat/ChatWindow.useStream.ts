@@ -1,4 +1,5 @@
 import { config } from "../../config/appConfig";
+import { authFetch } from "../../lib/auth";
 import type React from "react";
 import { showCartNotification } from "../../lib/cartEvents";
 import { parseImagesPayload, ProductPayload } from "../../lib/images";
@@ -57,7 +58,7 @@ export const readChatStream = async (
   callbacks: StreamCallbacks
 ): Promise<string> => {
   const url = `${config.api.baseUrl}${config.api.endpoints.stream}`;
-  const response = await fetch(url, {
+  const response = await authFetch(url, {
     method: "POST",
     mode: "cors",
     headers: { "Content-Type": "application/json" },

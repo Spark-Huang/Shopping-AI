@@ -51,7 +51,11 @@ describe("Chatbox user identity replay behavior", () => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
     localStorage.clear();
     sessionStorage.clear();
-    localStorage.setItem("shopping_user_id", "123456789");
+    localStorage.setItem(
+      "shopping_auth_user",
+      JSON.stringify({ id: 1, username: "alice" })
+    );
+    localStorage.setItem("shopping_auth_token", "test-token");
     requestHistory.mockReset();
     fetchMock.mockReset();
     fetchMock.mockImplementation(requestHistory);
@@ -107,13 +111,15 @@ describe("Chatbox user identity replay behavior", () => {
         expect(screen.getAllByTestId("example-chip")).toHaveLength(5);
         expect(screen.queryByText(/monthly spending limit|impulse buy/i)).toBeNull();
       }
-      expect(localStorage.getItem("shopping_user_id")).toBe(currentUserId);
-      expect(sessionStorage.getItem("shopping_user_id")).toBeNull();
+      const storedUser = JSON.parse(
+        localStorage.getItem("shopping_auth_user") ?? "null"
+      );
+      expect(storedUser?.id).toBe(Number(currentUserId));
+      expect(sessionStorage.getItem("shopping_auth_user")).toBeNull();
     }
   );
 
-  it("clears the persistent and legacy user id only on explicit reset", async () => {
-    sessionStorage.setItem("shopping_user_id", currentUserId);
+  it("keeps the authenticated user on explicit reset", async () => {
     requestHistory.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -129,8 +135,10 @@ describe("Chatbox user identity replay behavior", () => {
     );
     await vi.advanceTimersByTimeAsync(2500);
 
-    expect(localStorage.getItem("shopping_user_id")).toBe(currentUserId);
-    expect(sessionStorage.getItem("shopping_user_id")).toBeNull();
+    const storedUser = JSON.parse(
+      localStorage.getItem("shopping_auth_user") ?? "null"
+    );
+    expect(storedUser?.id).toBe(Number(currentUserId));
   });
 
   it("filters internal records and truncates long history blocks", async () => {

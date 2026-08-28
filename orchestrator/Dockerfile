@@ -4,11 +4,11 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+COPY orchestrator/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code and config
-COPY ./app ./app
+COPY orchestrator/app ./app
 COPY ./platform/configs/orchestrator ./platform/configs/orchestrator
 COPY ./platform/data ./platform/data
 

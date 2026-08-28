@@ -22,6 +22,7 @@ import OrdersPage from "../orders/OrdersPage";
 import { addContext, fetchHistory } from "../../api/historyApi";
 import { markPurchased } from "../../api/ordersApi";
 import { getOrCreateUserId } from "../../lib/identity";
+import { getAuthUser } from "../../lib/auth";
 import { parseMonthlyBudget, replaceMonthlyBudget } from "../../lib/budget";
 import { readFavorites } from "../../lib/favorites";
 import type { ImageContent } from "../../types/chat";
@@ -40,6 +41,7 @@ type MePageProps = {
   onOrderChange?: () => void;
   safetyEnabled: boolean;
   onSafetyChange: (enabled: boolean) => void;
+  onLogout?: () => void;
 };
 
 const MePage: React.FC<MePageProps> = ({
@@ -47,6 +49,7 @@ const MePage: React.FC<MePageProps> = ({
   onOrderChange,
   safetyEnabled,
   onSafetyChange,
+  onLogout,
 }) => {
   const { t, i18n } = useTranslation();
   // Local stand-in for routing inside the Me tab (D6); see MeView above.
@@ -132,6 +135,8 @@ const MePage: React.FC<MePageProps> = ({
     },
     [markingPurchased]
   );
+
+  const currentUser = getAuthUser();
 
   if (view === "orders") {
     return (
@@ -219,6 +224,24 @@ const MePage: React.FC<MePageProps> = ({
       <div className="me-page__brand">
         <span className="me-page__brand-dot" aria-hidden="true" />
         <h4 className="me-page__brand-name">Shopping AI</h4>
+      </div>
+
+      {/* Account row: current user + sign out */}
+      <div className="me-page__row">
+        <span className="me-page__row-icon" aria-hidden="true">
+          <PersonOutlineIcon fontSize="small" />
+        </span>
+        <span className="me-page__row-label">
+          {t("me.loggedInAs", { username: currentUser?.username ?? "" })}
+        </span>
+        <button
+          type="button"
+          className="lang-toggle"
+          onClick={onLogout}
+          data-testid="logout-button"
+        >
+          {t("me.logout")}
+        </button>
       </div>
 
       {/* Orders entry (D6) */}
