@@ -14,10 +14,20 @@ import sys
 from types import SimpleNamespace
 from typing import Any, Dict, Iterator, List
 
+import jwt as pyjwt
 import pytest
 from fastapi.testclient import TestClient
 
+from orchestrator.app import auth as orchestrator_auth
 from orchestrator.app.agents.state import Cart, State
+
+
+def _bearer(user_id: int = 1) -> str:
+    """Mint a valid Authorization header for the given user id."""
+    token = pyjwt.encode(
+        {"sub": str(user_id)}, orchestrator_auth.get_jwt_secret(), algorithm="HS256"
+    )
+    return f"Bearer {token}"
 
 
 class _NoopAgent:
@@ -176,7 +186,7 @@ class TestProxyEndpoints:
         monkeypatch.setattr(main_module.requests, "post", _post)
 
         response = main_module.remove_cart_item(
-            1, {"item": "Silk Dress", "amount": 1}
+            1, {"item": "Silk Dress", "amount": 1}, authorization=_bearer()
         )
 
         assert response["message"] == "removed"
@@ -189,6 +199,8 @@ class TestProxyEndpoints:
         recorded = {}
 
         class _Response:
+            status_code = 200
+
             def raise_for_status(self) -> None:
                 return None
 
@@ -202,12 +214,141 @@ class TestProxyEndpoints:
         monkeypatch.setattr(main_module.requests, "post", _post)
 
         response = main_module.add_context(
-            1, {"new_context": "  MONTHLY BUDGET: $50.00  "}
+            1,
+            {"new_context": "  MONTHLY BUDGET: $50.00  "},
+            authorization=_bearer(),
         )
 
         assert response["message"] == "updated"
         assert recorded["url"].endswith("/user/1/context/add")
         assert recorded["json"] == {"new_context": "MONTHLY BUDGET: $50.00"}
+
+
+class TestAuthEnforcement:
+    def test_stream_without_token_returns_401(self, client: TestClient) -> None:
+        response = client.post(
+            "/query/stream",
+            json={"user_id": 1, "query": "hi"},
+        )
+        assert response.status_code == 401
+
+    def test_stream_with_token_for_other_user_returns_403(
+        self, client: TestClient
+    ) -> None:
+        response = client.post(
+            "/query/stream",
+            json={"user_id": 2, "query": "hi"},
+            headers={"Authorization": _bearer(user_id=1)},
+        )
+        assert response.status_code == 403
+
+    def test_stream_with_garbage_token_returns_401(self, client: TestClient) -> None:
+        response = client.post(
+            "/query/stream",
+            json={"user_id": 1, "query": "hi"},
+            headers={"Authorization": "Bearer not-a-jwt"},
+        )
+        assert response.status_code == 401
+
+    def test_cart_without_token_returns_401(self, client: TestClient) -> None:
+        response = client.get("/cart/1")
+        assert response.status_code == 401
+
+
+class TestAuthProxies:
+    def test_register_proxies_to_memory_service(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        recorded = {}
+
+        class _Response:
+            status_code = 200
+
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self):
+                return {"token": "t", "user": {"id": 1, "username": "alice"}}
+
+        def _post(url: str, json: Dict[str, Any], headers: Dict[str, str], timeout: int):
+            recorded.update({"url": url, "json": json, "headers": headers})
+            return _Response()
+
+        monkeypatch.setattr(main_module.requests, "post", _post)
+
+        response = main_module.auth_register({"username": "alice", "password": "secret123"})
+
+        assert response["user"]["username"] == "alice"
+        assert recorded["url"].endswith("/auth/register")
+        assert recorded["json"] == {"username": "alice", "password": "secret123"}
+
+    def test_login_forwards_401_from_memory_service(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from fastapi import HTTPException
+
+        class _Response:
+            status_code = 401
+
+            def json(self):
+                return {"detail": "Invalid username or password"}
+
+        def _post(url: str, json: Dict[str, Any], headers: Dict[str, str], timeout: int):
+            return _Response()
+
+        monkeypatch.setattr(main_module.requests, "post", _post)
+
+        with pytest.raises(HTTPException) as excinfo:
+            main_module.auth_login({"username": "alice", "password": "wrong"})
+        assert excinfo.value.status_code == 401
+        assert excinfo.value.detail == "Invalid username or password"
+
+    def test_register_forwards_409_from_memory_service(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from fastapi import HTTPException
+
+        class _Response:
+            status_code = 409
+
+            def json(self):
+                return {"detail": "Username already taken"}
+
+        def _post(url: str, json: Dict[str, Any], headers: Dict[str, str], timeout: int):
+            return _Response()
+
+        monkeypatch.setattr(main_module.requests, "post", _post)
+
+        with pytest.raises(HTTPException) as excinfo:
+            main_module.auth_register({"username": "alice", "password": "secret123"})
+        assert excinfo.value.status_code == 409
+        assert excinfo.value.detail == "Username already taken"
+
+    def test_me_forwards_authorization_header(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        recorded = {}
+
+        class _Response:
+            status_code = 200
+
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self):
+                return {"id": 1, "username": "alice"}
+
+        def _get(url: str, headers: Dict[str, str], timeout: int):
+            recorded.update({"url": url, "headers": headers})
+            return _Response()
+
+        monkeypatch.setattr(main_module.requests, "get", _get)
+
+        response = main_module.auth_me(authorization=_bearer())
+
+        assert response["username"] == "alice"
+        assert recorded["url"].endswith("/auth/me")
+        assert recorded["headers"]["Authorization"].startswith("Bearer ")
 
 
 class TestTimingEndpoint:
@@ -219,6 +360,7 @@ class TestTimingEndpoint:
         response = client.post(
             "/query/timing",
             json={"user_id": 1, "query": "hello"},
+            headers={"Authorization": _bearer()},
         )
 
         assert response.status_code == 200
@@ -241,6 +383,7 @@ class TestStreamEndpoint:
             "POST",
             "/query/stream",
             json={"user_id": 1, "query": "hi"},
+            headers={"Authorization": _bearer()},
         ) as stream_response:
             assert stream_response.status_code == 200
             chunks: List[str] = []
@@ -265,6 +408,7 @@ class TestStreamEndpoint:
             "POST",
             "/query/stream",
             json={"user_id": 1, "query": "", "image": "data:image/jpeg;base64,AAA"},
+            headers={"Authorization": _bearer()},
         ) as stream_response:
             # Drain the stream so the generator actually runs.
             for _ in stream_response.iter_lines():

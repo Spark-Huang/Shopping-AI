@@ -27,6 +27,7 @@ cd web && npm install && cd ..
 ```bash
 cp .env.example .env
 # 编辑 .env：填你的网关地址/key/模型名（LLM_*/EMBED_*/SAFETY_*）
+# 注册登录还需要 JWT_SECRET：设一段随机长字符串（memory 与 orchestrator 必须一致）
 ```
 
 `.env` 永不提交。
@@ -104,6 +105,7 @@ curl http://localhost:8012/health   # 200
 5. **chat 报 Missing credentials** → `.env` 没配好或没 source
 6. **改 .env 不生效** → 重启对应服务
 7. **测试报 ModuleNotFoundError** → `export PYTHONPATH=仓库根`
+8. **登录/注册返回 401 或 token 校验失败** → 确认 memory 与 orchestrator 读到同一个 `JWT_SECRET`；手动方式需 `set -a; source .env; set +a` 后再起两个服务（`devRunner.py start` 不自动加载 .env，未设置时会回退到默认开发密钥，仅限本地自测）
 
 ## 端口总览
 

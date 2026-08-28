@@ -103,6 +103,20 @@
     "favoritesEmpty": "No favorites yet",
     "emptyBrowseHint": "Items you buy or love will show up here — start a chat and explore the catalog!",
     "back": "Back",
-    "buyExternal": "Buy externally"
+    "buyExternal": "Buy externally",
+    "loggedInAs": "Signed in as {{username}}",
+    "logout": "Sign out"
+  },
+  "auth": {
+    "title": "Sign in",
+    "subtitle": "Sign in to your Shopping AI account",
+    "usernameLabel": "Username",
+    "passwordLabel": "Password",
+    "loginButton": "Sign in",
+    "registerButton": "Create account",
+    "switchToLogin": "Already have an account? Sign in",
+    "switchToRegister": "New here? Create an account",
+    "loginFailed": "Sign in failed. Please try again.",
+    "registerFailed": "Registration failed. Please try again."
   }
 }

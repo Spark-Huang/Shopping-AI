@@ -14,11 +14,13 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import Navbar from "./components/Navbar";
+import AuthPage from "./components/auth/AuthPage";
 import Chatbox from "./components/chat/ChatWindow";
 import CartPanel from "./components/cart/CartPanel";
 import MePage from "./components/me/MePage";
 import BottomTabBar, { type TabId } from "./components/BottomTabBar";
 import Footer from "./components/Footer";
+import { AuthUser, clearAuth, getAuthUser } from "./lib/auth";
 import {
   SAFETY_STORAGE_KEY,
   readSafetyState,
@@ -26,6 +28,7 @@ import {
 } from "./safetyToggle";
 
 const App: React.FC = () => {
+  const [user, setUser] = useState<AuthUser | null>(getAuthUser);
   const [activeTab, setActiveTab] = useState<TabId>("messages");
   const [safetyEnabled, setSafetyEnabled] =
     useState(readSafetyState);
@@ -59,6 +62,15 @@ const App: React.FC = () => {
     setActiveTab("messages");
     addFavoriteToCartRef.current?.(productName);
   }, []);
+  const handleLogout = useCallback(() => {
+    clearAuth();
+    setUser(null);
+    setActiveTab("messages");
+  }, []);
+
+  if (!user) {
+    return <AuthPage onAuthenticated={setUser} />;
+  }
 
   return (
     <div className="app-shell">
@@ -102,6 +114,7 @@ const App: React.FC = () => {
               onOrderChange={handleOrderChange}
               safetyEnabled={safetyEnabled}
               onSafetyChange={changeSafety}
+              onLogout={handleLogout}
             />
           </section>
         </main>

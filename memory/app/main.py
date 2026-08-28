@@ -1,9 +1,25 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from datetime import UTC, datetime
+from typing import Optional
 import time
 
+from .auth import (
+    create_token,
+    hash_password,
+    user_id_from_authorization,
+    verify_password,
+)
 from .database import SessionLocal, initialize_database
-from .models import CartItem, ContextUpdate, ItemUpdate, Order, OrderCreate, User
+from .models import (
+    CartItem,
+    ContextUpdate,
+    ItemUpdate,
+    LoginRequest,
+    Order,
+    OrderCreate,
+    RegisterRequest,
+    User,
+)
 
 app = FastAPI()
 
@@ -16,6 +32,71 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def _auth_response(user: User) -> dict:
+    return {
+        "token": create_token(user.id, user.username),
+        "user": {"id": user.id, "username": user.username},
+    }
+
+
+@app.post("/auth/register")
+async def register(request: RegisterRequest):
+    """Create an account and return a JWT.
+
+    The very first registration claims the legacy demo row (user id 1)
+    so its cart, orders, and context carry over to the new account.
+    """
+    with SessionLocal() as db:
+        if db.query(User).filter(User.username == request.username).first():
+            raise HTTPException(status_code=409, detail="Username already taken")
+
+        user = None
+        already_registered = (
+            db.query(User).filter(User.password_hash.isnot(None)).first() is not None
+        )
+        if not already_registered:
+            legacy = db.query(User).filter(User.id == 1).first()
+            if legacy:
+                legacy.username = request.username
+                legacy.password_hash = hash_password(request.password)
+                user = legacy
+        if user is None:
+            user = User(
+                username=request.username,
+                password_hash=hash_password(request.password),
+                context="",
+            )
+            db.add(user)
+        db.commit()
+        db.refresh(user)
+        return _auth_response(user)
+
+
+@app.post("/auth/login")
+async def login(request: LoginRequest):
+    """Verify credentials and return a JWT for the user."""
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.username == request.username).first()
+        if (
+            not user
+            or not user.password_hash
+            or not verify_password(request.password, user.password_hash)
+        ):
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+        return _auth_response(user)
+
+
+@app.get("/auth/me")
+async def me(authorization: Optional[str] = Header(default=None)):
+    """Return the account behind the bearer token."""
+    user_id = user_id_from_authorization(authorization)
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Unknown user")
+        return {"id": user.id, "username": user.username}
 
 
 def _cart_item_dict(item: CartItem) -> dict:

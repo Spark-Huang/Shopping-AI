@@ -53,6 +53,27 @@ def _ensure_cart_columns() -> None:
         conn.commit()
 
 
+def _ensure_user_columns() -> None:
+    """Idempotently add auth columns to users tables created before they existed."""
+    with _current_engine.connect() as conn:
+        columns = conn.execute(text("PRAGMA table_info(users)")).fetchall()
+        column_names = {col[1] for col in columns}
+
+        for name, ddl in (
+            ("username", "VARCHAR"),
+            ("password_hash", "VARCHAR"),
+            ("created_at", "DATETIME"),
+        ):
+            if name not in column_names:
+                try:
+                    conn.execute(text(f"ALTER TABLE users ADD COLUMN {name} {ddl}"))
+                    conn.commit()
+                    logging.info("memory | added %s column to users", name)
+                except Exception as exc:
+                    logging.warning(f"memory | could not add {name} column: {exc}")
+        conn.commit()
+
+
 def _configure_sqlite() -> None:
     """Apply the local SQLite durability/concurrency defaults."""
     if not _current_engine.url.get_backend_name().startswith("sqlite"):
@@ -98,5 +119,6 @@ def initialize_database() -> None:
 
     Base.metadata.create_all(bind=_current_engine)
     _ensure_cart_columns()
+    _ensure_user_columns()
     _configure_sqlite()
     _ensure_cart_unique_index()

@@ -3,6 +3,7 @@
  */
 
 import { config } from "../config/appConfig";
+import { authFetch } from "../lib/auth";
 import { CartResponse } from "../types/cart";
 import { ImageContent } from "../types/chat";
 
@@ -12,7 +13,7 @@ import { ImageContent } from "../types/chat";
  */
 export const fetchCart = async (userId: number): Promise<CartResponse> => {
   const url = `${config.api.baseUrl}/cart/${userId}`;
-  const response = await fetch(url);
+  const response = await authFetch(url);
   if (!response.ok) {
     throw new Error(`Cart fetch failed: HTTP ${response.status}`);
   }
@@ -24,7 +25,7 @@ export const addCartProduct = async (
   userId: number,
   product: ImageContent
 ): Promise<void> => {
-  const response = await fetch(`${config.api.baseUrl}/cart/${userId}`, {
+  const response = await authFetch(`${config.api.baseUrl}/cart/${userId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -49,7 +50,7 @@ export const removeCartProduct = async (
   item: string,
   amount = 1
 ): Promise<void> => {
-  const response = await fetch(`${config.api.baseUrl}/cart/${userId}/remove`, {
+  const response = await authFetch(`${config.api.baseUrl}/cart/${userId}/remove`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ item, amount }),

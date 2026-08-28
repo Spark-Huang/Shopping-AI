@@ -8,6 +8,7 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL:-http://llm-gateway:8000/v1}
       LLM_NAME: ${LLM_NAME:-openrouter/stealth/ox-alpha}
       SAFETY_BASE_URL: http://safety:8012
+      JWT_SECRET: ${JWT_SECRET:-shopping-ai-dev-secret}
       CONFIG_OVERRIDE: ${CONFIG_OVERRIDE:-}
     ports:
       - "8009:8009"
@@ -43,6 +44,7 @@ services:
       context: ../memory
     environment:
       MEMORY_DATABASE_URL: sqlite:////data/context.db
+      JWT_SECRET: ${JWT_SECRET:-shopping-ai-dev-secret}
     volumes:
       - memory-data:/data
     ports:
@@ -128,6 +130,9 @@ services:
     command: ["milvus", "run", "standalone"]
     security_opt:
       - seccomp:unconfined
+    ports:
+      - "19530:19530"
+      - "9091:9091"
     environment:
       ETCD_ENDPOINTS: http://etcd:2379
       MINIO_ADDRESS: minio:9000
