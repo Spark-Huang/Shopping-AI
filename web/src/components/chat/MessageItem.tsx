@@ -68,19 +68,8 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
               marginTop: 10,
             }}
           >
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: "#333",
-                fontSize: 16,
-              }}
-            >
-              🛍️
+            <span className="assistant-avatar" aria-hidden="true">
+              <span className="assistant-avatar__face" />
             </span>
             <div className={`messages__item messages__item--${role}`}>
               <Loader />
@@ -108,18 +97,12 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
           }}
         >
           <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              background: "#333",
-              fontSize: 16,
-            }}
+            className={`assistant-avatar${
+              isSaysNoMessage ? " assistant-avatar--guard" : ""
+            }`}
+            aria-hidden="true"
           >
-            {isSaysNoMessage ? "🛡️" : "🛍️"}
+            <span className="assistant-avatar__face" />
           </span>
           <div
             className={`messages__item messages__item--${role}${

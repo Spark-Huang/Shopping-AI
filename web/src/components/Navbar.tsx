@@ -22,7 +22,7 @@ const Navbar: React.FC = () => {
       {/* Top status bar: brand only (language switcher now lives in the Me tab) */}
       <div className="status-bar">
         <div className="status-bar__brand">
-          <MenuIcon sx={{ color: "var(--brand-deep)" }} fontSize="small" />
+          <MenuIcon sx={{ color: "var(--text-secondary)" }} fontSize="small" />
           <span className="status-bar__brand-dot" aria-hidden="true" />
           Shopping AI
         </div>
