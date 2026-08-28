@@ -74,6 +74,22 @@ def _ensure_user_columns() -> None:
         conn.commit()
 
 
+def _ensure_session_columns() -> None:
+    """Attach nullable sessions support without invalidating legacy messages."""
+    with _current_engine.connect() as conn:
+        columns = conn.execute(text("PRAGMA table_info(messages)")).fetchall()
+        if columns and "session_id" not in {column[1] for column in columns}:
+            try:
+                conn.execute(
+                    text("ALTER TABLE messages ADD COLUMN session_id INTEGER NULL")
+                )
+                conn.commit()
+                logging.info("memory | added nullable session_id column to messages")
+            except Exception as exc:
+                logging.warning("memory | could not add session_id column: %s", exc)
+        conn.commit()
+
+
 def _configure_sqlite() -> None:
     """Apply the local SQLite durability/concurrency defaults."""
     if not _current_engine.url.get_backend_name().startswith("sqlite"):
@@ -120,5 +136,6 @@ def initialize_database() -> None:
     Base.metadata.create_all(bind=_current_engine)
     _ensure_cart_columns()
     _ensure_user_columns()
+    _ensure_session_columns()
     _configure_sqlite()
     _ensure_cart_unique_index()

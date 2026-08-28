@@ -3,6 +3,9 @@ import { toast } from "react-toastify";
 import SendIcon from "@mui/icons-material/Send";
 import CancelIcon from "@mui/icons-material/Cancel";
 import UploadIcon from "@mui/icons-material/Upload";
+import HistoryIcon from "@mui/icons-material/History";
+import AddCommentIcon from "@mui/icons-material/AddComment";
+import DeleteIcon from "@mui/icons-material/DeleteOutline";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 
@@ -14,7 +17,13 @@ import {
 } from "../../lib/identity";
 import { readFavorites, toggleFavorite } from "../../lib/favorites";
 import type { ImageContent } from "../../types/chat";
-import { fetchHistory } from "../../api/historyApi";
+import {
+  fetchHistory,
+  createChatSession,
+  deleteChatSession,
+  fetchSessionMessages,
+  listChatSessions,
+} from "../../api/historyApi";
 import { addCartProduct } from "../../api/cartApi";
 import { useTranslation } from "react-i18next";
 import {
@@ -25,7 +34,7 @@ import {
 import { splitHistoryIntoBubbles } from "./chatHistory";
 import { readChatStream } from "./ChatWindow.useStream";
 import { scheduleSession, sleep } from "./streamSession";
-import type { ChatMessage } from "./ChatWindow.types";
+import type { ChatMessage, SessionSummary } from "./ChatWindow.types";
 
 /**
  * Main chatbox component for Shopping AI.
@@ -59,6 +68,9 @@ const Chatbox: React.FC<ChatboxProps> = ({
   );
   const [isResetArmed, setIsResetArmed] = useState(false);
   const [cartAddInFlight, setCartAddInFlight] = useState(false);
+  const [chatSessions, setChatSessions] = useState<SessionSummary[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const messageRefs = useRef<React.RefObject<HTMLDivElement>[]>([]);
   const [lastAssistantIndex, setLastAssistantIndex] = useState<number | null>(
     null
@@ -83,6 +95,85 @@ const Chatbox: React.FC<ChatboxProps> = ({
       resetConfirmTimeoutRef.current = null;
     }
     setIsResetArmed(false);
+  };
+
+  const showWelcome = async () => {
+    setMessages([]);
+    await sleep(1000);
+    addMessage("assistant", "", "", true);
+    await sleep(1000);
+    for (const char of Array.from(t("chatbox.introduction"))) {
+      await sleep(40);
+      updateLastMessage(char);
+    }
+  };
+
+  const refreshSessions = async (userId: number) => {
+    try {
+      setChatSessions(await listChatSessions(userId));
+    } catch (error) {
+      console.warn("Chatbox: session list unavailable", error);
+      setChatSessions([]);
+    }
+  };
+
+  useEffect(() => {
+    void refreshSessions(getOrCreateUserId());
+  }, []);
+
+  const handleNewSession = async () => {
+    if (isLoading) return;
+    try {
+      const created = await createChatSession(getOrCreateUserId());
+      setChatSessions((previous) => [
+        created,
+        ...previous.filter((item) => item.id !== created.id),
+      ]);
+      setActiveSessionId(created.id);
+      setIsHistoryOpen(false);
+      disarmResetConfirmation();
+      setImage("");
+      setPreviewImage("");
+      await showWelcome();
+    } catch {
+      toast.error(t("sessions.loadFailed"));
+    }
+  };
+
+  const loadSession = async (sessionId: number) => {
+    if (isLoading) return;
+    try {
+      const sessionMessages = await fetchSessionMessages(getOrCreateUserId(), sessionId);
+      setActiveSessionId(sessionId);
+      setIsHistoryOpen(false);
+      disarmResetConfirmation();
+      setImage("");
+      setPreviewImage("");
+      setMessages(
+        sessionMessages.map((item) => ({
+          role: item.role,
+          content: item.content,
+          productName: "",
+          isWelcome: false,
+          isHistory: true,
+        }))
+      );
+    } catch {
+      toast.error(t("sessions.loadFailed"));
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: number) => {
+    try {
+      await deleteChatSession(getOrCreateUserId(), sessionId);
+      setChatSessions((previous) => previous.filter((item) => item.id !== sessionId));
+      if (activeSessionId === sessionId) {
+        setActiveSessionId(null);
+        await showWelcome();
+      }
+    } catch {
+      toast.error(t("sessions.deleteFailed"));
+    }
   };
 
   // Event handlers
@@ -228,6 +319,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
         image: image || "",
         image_bool: !!image,
         language: i18n.language?.startsWith("zh") ? "zh" : "en",
+        session_id: activeSessionId,
       };
 
       // Clear image immediately after preparing payload
@@ -321,23 +413,8 @@ const Chatbox: React.FC<ChatboxProps> = ({
     if (userInitiated) {
       clearUserIdentity();
     }
-
-    await sleep(1000);
-    addMessage("assistant", "", "", true);
-
-    await sleep(1000);
-    const introduction = t("chatbox.introduction");
-
-    // Typing effect emits one character per tick (char-wise typewriter).
-    // The old word-based split (on spaces) was incompatible with CJK text,
-    // which has no spaces — Chinese appeared as one huge block. Iterating
-    // code points (not UTF-16 units) keeps astral characters like emoji
-    // intact.
-    const chars = Array.from(introduction);
-    for (const char of chars) {
-      await sleep(40);
-      updateLastMessage(char);
-    }
+    setActiveSessionId(null);
+    await showWelcome();
   };
 
   useEffect(() => {
@@ -498,8 +575,56 @@ const Chatbox: React.FC<ChatboxProps> = ({
         <div className={`chatbox__support ${isOpen ? "chatbox--active" : ""}`}>
           {/* Header */}
           <div className="chatbox__header">
-            <h4 className="chatbox__heading--header">{t("chatbox.title")}</h4>
+            <div className="chatbox__header-left">
+              <button
+                type="button"
+                className="session-history__toggle"
+                aria-label={t("sessions.toggle")}
+                title={t("sessions.toggle")}
+                onClick={() => setIsHistoryOpen((open) => !open)}
+              >
+                <HistoryIcon fontSize="small" />
+              </button>
+              <h4 className="chatbox__heading--header">{t("chatbox.title")}</h4>
+            </div>
+            <button
+              type="button"
+              className="session-history__new"
+              aria-label={t("sessions.new")}
+              title={t("sessions.new")}
+              onClick={handleNewSession}
+            >
+              <AddCommentIcon fontSize="small" />
+            </button>
           </div>
+          {isHistoryOpen && (
+            <div className="session-history" data-testid="session-history">
+              <button type="button" onClick={handleNewSession}>
+                {t("sessions.new")}
+              </button>
+              <ul>
+                {chatSessions.map((item) => (
+                  <li key={item.id} className={item.id === activeSessionId ? "active" : ""}>
+                    <button type="button" onClick={() => loadSession(item.id)}>
+                      {item.title || t("sessions.untitled")}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={t("sessions.delete", {
+                        title: item.title || t("sessions.untitled"),
+                      })}
+                      onClick={() => handleDeleteSession(item.id)}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {chatSessions.length === 0 && (
+                <p className="session-history__empty">{t("sessions.empty")}</p>
+              )}
+            </div>
+          )}
 
           {/* Messages */}
           <div

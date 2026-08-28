@@ -134,6 +134,7 @@ class TestSummaryAgentInvoke:
         assert post_recorder.calls[1].payload == {
             "query": "hi",
             "response": "",
+            "session_id": None,
         }
 
     def test_long_context_uses_llm_tool_call(

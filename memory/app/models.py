@@ -6,7 +6,16 @@ from math import isfinite
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import Column, DateTime, Float, Index, Integer, String, Text
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 
 from .database import Base
 
@@ -51,9 +60,24 @@ class Message(Base):
     user_id = Column(Integer, index=True, nullable=False)
     role = Column(String(16), nullable=False)
     content = Column(Text, nullable=False)
+    session_id = Column(Integer, ForeignKey("sessions.id"), index=True, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     __table_args__ = (
         Index("ix_messages_user_created", "user_id", "created_at"),
+        Index("ix_messages_user_session", "user_id", "session_id", "created_at"),
+    )
+
+class Session(Base):
+    __tablename__ = "sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    title = Column(String(200), nullable=False, default="")
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
 
@@ -89,6 +113,15 @@ class MessageCreate(BaseModel):
 class MessageExtract(BaseModel):
     query: str
     response: str
+    session_id: Optional[int] = None
+
+
+class SessionCreate(BaseModel):
+    title: str = Field(default="", max_length=200)
+
+
+class SessionUpdate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
 
 
 class ItemUpdate(BaseModel):

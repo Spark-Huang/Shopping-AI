@@ -4,6 +4,7 @@ from openai import OpenAI
 from .state import State
 from .budget import extract_monthly_budget, format_monthly_budget
 from ..tools.functions import summary_function, parse_tool_call_fallback
+from .session_titles import maybe_generate_session_title
 import requests
 import json
 import os
@@ -124,11 +125,22 @@ class SummaryAgent:
             )
             requests.post(
                 f"{self.memory_base_url}/user/{output_state.user_id}/messages/extract",
-                json={"query": output_state.query, "response": output_state.response},
+                json={
+                    "query": output_state.query,
+                    "response": output_state.response,
+                    "session_id": output_state.session_id,
+                },
                 timeout=3,
             )
         except requests.RequestException as exc:
             logging.warning("SummaryAgent.invoke() | message persistence unavailable: %s", exc)
+            return output_state
+
+        if output_state.session_id is not None:
+            try:
+                maybe_generate_session_title(self, output_state)
+            except Exception as exc:
+                logging.warning("SummaryAgent.invoke() | title generation unavailable: %s", exc)
 
         end = time.monotonic()
         output_state.timings["summary"] = end - start

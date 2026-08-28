@@ -1,12 +1,24 @@
 import React from "react";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { fireEvent } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Chatbox from "./ChatWindow";
+import * as historyApi from "../../api/historyApi";
+import "../../i18n";
 
 vi.mock("react-toastify", () => ({
   toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() },
 }));
+
+vi.mock("../../api/historyApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../api/historyApi")>();
+  return {
+    ...actual,
+    createChatSession: vi.fn(),
+    deleteChatSession: vi.fn(),
+    fetchSessionMessages: vi.fn(),
+    listChatSessions: vi.fn(),
+  };
+});
 
 const currentUserId = "1";
 const requestHistory = vi.fn();
@@ -62,6 +74,7 @@ describe("Chatbox user identity replay behavior", () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.useRealTimers();
   });
 
@@ -93,10 +106,11 @@ describe("Chatbox user identity replay behavior", () => {
       renderChatbox();
       await vi.advanceTimersByTimeAsync(2500);
 
-      expect(requestHistory).toHaveBeenCalledTimes(1);
-      expect(String(requestHistory.mock.calls[0][0])).toBe(
-        `/api/context/${currentUserId}`
-      );
+      expect(
+        requestHistory.mock.calls.some(
+          (call) => String(call[0]) === `/api/context/${currentUserId}`
+        )
+      ).toBe(true);
       if (shouldReplayHistory) {
         expect(
           screen.getAllByText("Previous recommendation").length
@@ -184,5 +198,103 @@ describe("Chatbox user identity replay behavior", () => {
 
     expect(screen.queryByTestId("budget-form")).toBeNull();
     expect(screen.queryByRole("button", { name: /budget/i })).toBeNull();
+  });
+});
+
+describe("Chatbox session history", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    localStorage.clear();
+    localStorage.setItem(
+      "shopping_auth_user",
+      JSON.stringify({ id: 1, username: "alice" })
+    );
+    localStorage.setItem("shopping_auth_token", "token");
+    fetchMock.mockReset();
+    vi.mocked(historyApi.listChatSessions).mockResolvedValue([
+      { id: 2, user_id: 1, title: "买玩具", created_at: null, updated_at: null },
+      { id: 1, user_id: 1, title: "买化妆台和衣服", created_at: null, updated_at: null },
+    ]);
+    vi.mocked(historyApi.fetchSessionMessages).mockResolvedValue([
+      { id: 1, user_id: 1, session_id: 2, role: "user", content: "买玩具", created_at: null },
+      { id: 2, user_id: 1, session_id: 2, role: "assistant", content: "找到积木", created_at: null },
+    ]);
+    vi.mocked(historyApi.deleteChatSession).mockResolvedValue();
+    vi.mocked(historyApi.createChatSession).mockResolvedValue({
+      id: 3, user_id: 1, title: "", created_at: null, updated_at: null,
+    });
+    fetchMock.mockImplementation(async (input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/sessions/1/2/messages")) {
+        return {
+          ok: true,
+          json: async () => ({
+            messages: [
+              { role: "user", content: "买玩具" },
+              { role: "assistant", content: "找到积木" },
+            ],
+          }),
+        };
+      }
+      if (url === "/api/sessions/1" && (!init || init.method === "GET")) {
+        return {
+          ok: true,
+          json: async () => ({
+            sessions: [
+              { id: 2, title: "买玩具" },
+              { id: 1, title: "买化妆台和衣服" },
+            ],
+          }),
+        };
+      }
+      if (url.startsWith("/api/context/")) {
+        return { ok: true, json: async () => ({ context: "" }) };
+      }
+      if (url.endsWith("/query/stream")) {
+        return {
+          ok: true,
+          body: {
+            getReader: () => ({
+              read: async () => ({ value: new TextEncoder().encode("data: [DONE]\n"), done: false }),
+            }),
+          },
+          json: async () => ({}),
+        };
+      }
+      return { ok: true, json: async () => ({ sessions: [] }) };
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it("loads and continues a selected session", async () => {
+    renderChatbox();
+    fireEvent.click(screen.getAllByLabelText("History")[0]);
+    fireEvent.click(await screen.findByText("买玩具"));
+    expect(await screen.findByText("找到积木")).toBeTruthy();
+
+    const input = await screen.findByPlaceholderText("Type something here...");
+    fireEvent.change(input, { target: { value: "another toy" } });
+    fireEvent.keyUp(input, { key: "Enter" });
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          (call) =>
+            String(call[0]).endsWith("/query/stream") &&
+            JSON.parse(String(call[1]?.body)).session_id === 2
+        )
+      ).toBe(true)
+    );
+  });
+
+  it("deletes a session from history", async () => {
+    renderChatbox();
+    fireEvent.click(screen.getAllByLabelText("History")[0]);
+    fireEvent.click(await screen.findByLabelText("Delete 买玩具"));
+    await waitFor(() => expect(screen.queryByText("买玩具")).toBeNull());
+    expect(historyApi.deleteChatSession).toHaveBeenCalledWith(1, 2);
   });
 });

@@ -26,6 +26,7 @@ from .agents.retrieval_proxy import RetrieverAgent
 from .agents.cart import CartAgent
 from .agents.chatter import ChatterAgent
 from .agents.summarizer import SummaryAgent
+from .agents.session_titles import maybe_generate_session_title
 from .graph import create_graph
 from .settings import load_config
 
@@ -96,6 +97,7 @@ class QueryRequest(BaseModel):
     safety_enabled: Optional[bool] = PydanticField(default=True, alias="safety")
     image_bool: bool = False
     language: Optional[str] = ""
+    session_id: Optional[int] = None
 
 
 class QueryResponse(BaseModel):
@@ -133,6 +135,7 @@ def create_initial_state(request: QueryRequest) -> State:
     """Create initial state from request."""
     return State(
         user_id=request.user_id,
+        session_id=request.session_id,
         query=request.query,
         image=request.image,
         context=request.context or "",
@@ -227,6 +230,14 @@ async def process_query_stream(
         logger.error(f"Error processing streaming query: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.post("/query/title")
+async def generate_session_title(request: QueryRequest, authorization: Optional[str] = Header(default=None)):
+    """Generate a session title without blocking the streamed conversation."""
+    require_user(request.user_id, authorization)
+    scheduled = maybe_generate_session_title(agents["summary_agent"], create_initial_state(request))
+    return {"scheduled": scheduled}
+
 @app.post("/query/timing", response_model=QueryResponse)
 async def process_query_timing(
     request: QueryRequest,
@@ -276,6 +287,63 @@ async def process_query_timing(
         logger.error(f"Error processing timing query: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
         
+@app.get("/sessions/{user_id}")
+def session_list(user_id: int, authorization: Optional[str] = Header(default=None)):
+    """Read-only proxy for a user's chat sessions."""
+    require_user(user_id, authorization)
+    memory_url = f"{config.memory_base_url}/user/{user_id}/sessions"
+    try:
+        response = requests.get(memory_url, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as exc:
+        logger.error("orchestrator | /sessions/%s | memory service call failed: %s", user_id, exc)
+        raise HTTPException(status_code=502, detail="Failed to fetch sessions")
+
+
+@app.post("/sessions/{user_id}")
+def session_create(user_id: int, request: Dict, authorization: Optional[str] = Header(default=None)):
+    require_user(user_id, authorization)
+    try:
+        response = requests.post(
+            f"{config.memory_base_url}/user/{user_id}/sessions", json=request, timeout=10
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as exc:
+        logger.error("orchestrator | POST /sessions/%s failed: %s", user_id, exc)
+        raise HTTPException(status_code=502, detail="Failed to create session")
+
+
+@app.get("/sessions/{user_id}/{session_id}/messages")
+def session_messages(user_id: int, session_id: int, authorization: Optional[str] = Header(default=None)):
+    require_user(user_id, authorization)
+    try:
+        response = requests.get(
+            f"{config.memory_base_url}/user/{user_id}/sessions/{session_id}/messages",
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as exc:
+        logger.error("orchestrator | session messages read failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Failed to fetch session messages")
+
+
+@app.delete("/sessions/{user_id}/{session_id}")
+def session_delete(user_id: int, session_id: int, authorization: Optional[str] = Header(default=None)):
+    require_user(user_id, authorization)
+    try:
+        response = requests.delete(
+            f"{config.memory_base_url}/user/{user_id}/sessions/{session_id}", timeout=10
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as exc:
+        logger.error("orchestrator | session delete failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Failed to delete session")
+
+
 @app.get("/cart/{user_id}")
 def get_cart(user_id: int, authorization: Optional[str] = Header(default=None)):
     """

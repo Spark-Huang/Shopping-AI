@@ -37,3 +37,63 @@ export const addContext = async (
     throw new Error(`Context update failed: HTTP ${response.status}`);
   }
 };
+
+export interface ChatSession {
+  id: number;
+  user_id: number;
+  title: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface SessionMessage {
+  id: number;
+  user_id: number;
+  session_id: number | null;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string | null;
+}
+
+const requestSession = async (url: string, init?: RequestInit): Promise<Response> => {
+  const response = await authFetch(url, init);
+  if (!response.ok) {
+    throw new Error(`Session request failed: HTTP ${response.status}`);
+  }
+  return response;
+};
+
+export const listChatSessions = async (userId: number): Promise<ChatSession[]> => {
+  const response = await requestSession(`${config.api.baseUrl}/sessions/${userId}`);
+  const body = (await response.json()) as { sessions: ChatSession[] };
+  return body.sessions ?? [];
+};
+
+export const createChatSession = async (userId: number): Promise<ChatSession> => {
+  const response = await requestSession(`${config.api.baseUrl}/sessions/${userId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "" }),
+  });
+  return (await response.json()) as ChatSession;
+};
+
+export const fetchSessionMessages = async (
+  userId: number,
+  sessionId: number
+): Promise<SessionMessage[]> => {
+  const response = await requestSession(
+    `${config.api.baseUrl}/sessions/${userId}/${sessionId}/messages`
+  );
+  const body = (await response.json()) as { messages: SessionMessage[] };
+  return body.messages;
+};
+
+export const deleteChatSession = async (
+  userId: number,
+  sessionId: number
+): Promise<void> => {
+  await requestSession(`${config.api.baseUrl}/sessions/${userId}/${sessionId}`, {
+    method: "DELETE",
+  });
+};

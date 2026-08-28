@@ -70,6 +70,7 @@ class State(BaseModel):
         timings: Performance timing information
     """
     user_id: int = Field(..., description="Unique user identifier")
+    session_id: Optional[int] = Field(default=None, description="Chat session identifier")
     query: str = Field(..., description="User's input query")
     context: str = Field(default="", description="Previous conversation context")
     cart: Cart = Field(default_factory=Cart, description="User's shopping cart")

@@ -25,6 +25,9 @@ from .models import (
     Order,
     OrderCreate,
     RegisterRequest,
+    Session,
+    SessionCreate,
+    SessionUpdate,
     User,
 )
 
@@ -137,7 +140,35 @@ def _message_dict(message: Message) -> dict:
         "role": message.role,
         "content": message.content,
         "created_at": message.created_at.isoformat() if message.created_at else None,
+        "session_id": message.session_id,
     }
+
+
+def _session_dict(session: Session) -> dict:
+    return {
+        "id": session.id,
+        "user_id": session.user_id,
+        "title": session.title,
+        "created_at": session.created_at.isoformat() if session.created_at else None,
+        "updated_at": session.updated_at.isoformat() if session.updated_at else None,
+    }
+
+
+def _get_scoped_session(db, user_id: int, authorization: Optional[str], session_id: int) -> Session:
+    user_id_from_authorization(authorization)
+    chat_session = (
+        db.query(Session)
+        .filter(Session.id == session_id, Session.user_id == user_id)
+        .first()
+    )
+    if not chat_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return chat_session
+
+
+def _touch_session(db, chat_session: Session) -> None:
+    chat_session.updated_at = datetime.now(UTC)
+    db.commit()
 
 
 def _format_context(base_context: str, semantic_memory: list[str]) -> str:
@@ -212,18 +243,28 @@ async def get_semantic_memory(user_id: int, query: str):
 
 
 @app.post("/user/{user_id}/messages/extract")
-async def add_and_extract_message(user_id: int, request: MessageExtract):
+async def add_and_extract_message(
+    user_id: int,
+    request: MessageExtract,
+    authorization: Optional[str] = Header(default=None),
+):
+    session_id = request.session_id
     messages = [
-        Message(user_id=user_id, role="user", content=request.query),
-        Message(user_id=user_id, role="assistant", content=request.response),
+        Message(user_id=user_id, role="user", content=request.query, session_id=session_id),
+        Message(user_id=user_id, role="assistant", content=request.response, session_id=session_id),
     ]
     with SessionLocal() as db:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             db.add(User(id=user_id, context=""))
+        chat_session = None
+        if session_id is not None:
+            chat_session = _get_scoped_session(db, user_id, authorization, session_id)
         db.add_all(messages)
         db.commit()
         message_ids = [message.id for message in messages]
+        if session_id is not None:
+            _touch_session(db, chat_session)
 
     transcript = f"User {user_id}\nUser: {request.query}\nAssistant: {request.response}"
     extraction_scheduled = False
@@ -238,6 +279,79 @@ async def add_and_extract_message(user_id: int, request: MessageExtract):
         "user_id": user_id,
         "message_ids": message_ids,
         "extraction_scheduled": extraction_scheduled,
+    }
+
+
+@app.get("/user/{user_id}/sessions")
+async def list_sessions(user_id: int, authorization: Optional[str] = Header(default=None)):
+    user_id_from_authorization(authorization)
+    with SessionLocal() as db:
+        sessions = (
+            db.query(Session)
+            .filter(Session.user_id == user_id)
+            .order_by(Session.updated_at.desc(), Session.id.desc())
+            .all()
+        )
+    return {"user_id": user_id, "sessions": [_session_dict(item) for item in sessions]}
+
+
+@app.post("/user/{user_id}/sessions")
+async def create_session(user_id: int, request: SessionCreate, authorization: Optional[str] = Header(default=None)):
+    user_id_from_authorization(authorization)
+    with SessionLocal() as db:
+        if not db.query(User).filter(User.id == user_id).first():
+            db.add(User(id=user_id, context=""))
+        chat_session = Session(user_id=user_id, title=request.title)
+        db.add(chat_session)
+        db.commit()
+        db.refresh(chat_session)
+    return _session_dict(chat_session)
+
+
+@app.get("/user/{user_id}/sessions/{session_id}")
+async def read_session(user_id: int, session_id: int, authorization: Optional[str] = Header(default=None)):
+    with SessionLocal() as db:
+        chat_session = _get_scoped_session(db, user_id, authorization, session_id)
+    return _session_dict(chat_session)
+
+
+@app.patch("/user/{user_id}/sessions/{session_id}")
+async def update_session_title(user_id: int, session_id: int, request: SessionUpdate, authorization: Optional[str] = Header(default=None)):
+    with SessionLocal() as db:
+        chat_session = _get_scoped_session(db, user_id, authorization, session_id)
+        chat_session.title = request.title
+        _touch_session(db, chat_session)
+        db.refresh(chat_session)
+    return _session_dict(chat_session)
+
+
+@app.delete("/user/{user_id}/sessions/{session_id}")
+async def delete_session(user_id: int, session_id: int, authorization: Optional[str] = Header(default=None)):
+    with SessionLocal() as db:
+        chat_session = _get_scoped_session(db, user_id, authorization, session_id)
+        db.query(Message).filter(
+            Message.user_id == user_id,
+            Message.session_id == session_id,
+        ).delete(synchronize_session=False)
+        db.delete(chat_session)
+        db.commit()
+    return {"message": "Session deleted"}
+
+
+@app.get("/user/{user_id}/sessions/{session_id}/messages")
+async def list_session_messages(user_id: int, session_id: int, authorization: Optional[str] = Header(default=None)):
+    with SessionLocal() as db:
+        _get_scoped_session(db, user_id, authorization, session_id)
+        messages = (
+            db.query(Message)
+            .filter(Message.user_id == user_id, Message.session_id == session_id)
+            .order_by(Message.created_at.asc(), Message.id.asc())
+            .all()
+        )
+    return {
+        "user_id": user_id,
+        "session_id": session_id,
+        "messages": [_message_dict(message) for message in messages],
     }
 
 
