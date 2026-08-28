@@ -92,6 +92,22 @@
   background:
     radial-gradient(ellipse at 74% 10%, rgba(233, 250, 255, 0.44), transparent 34%),
     radial-gradient(ellipse at 10% 92%, rgba(172, 215, 236, 0.22), transparent 38%);
+  background-size: 115% 115%, 120% 120%;
+  animation: mist-chat-flow 22s ease-in-out infinite;
+}
+
+@keyframes mist-chat-flow {
+  0% {
+    background-position: 74% 10%, 10% 92%;
+  }
+
+  50% {
+    background-position: 66% 16%, 16% 84%;
+  }
+
+  100% {
+    background-position: 74% 10%, 10% 92%;
+  }
 }
 
 .messages__slow-hint {

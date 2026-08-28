@@ -30,6 +30,48 @@
   --ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+@keyframes mist-page-flow {
+  0% {
+    background-position: 0 0, 0 0, 50% 8%, 13% 82%, 92% 72%, 0 0;
+  }
+
+  50% {
+    background-position: 10px 14px, -12px 8px, 48% 12%, 17% 78%, 88% 76%, 0 0;
+  }
+
+  100% {
+    background-position: 0 0, 0 0, 50% 8%, 13% 82%, 92% 72%, 0 0;
+  }
+}
+
+@keyframes mist-phone-flow {
+  0% {
+    background-position: 0 0, 0 0, 50% 5%, 12% 82%, 94% 68%, 0 0;
+  }
+
+  50% {
+    background-position: -8px 12px, 12px -8px, 54% 9%, 16% 78%, 89% 72%, 0 0;
+  }
+
+  100% {
+    background-position: 0 0, 0 0, 50% 5%, 12% 82%, 94% 68%, 0 0;
+  }
+}
+
+@keyframes mist-grain-drift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(10px, -8px, 0);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .dark {
   --surface-1: #141414;
   --surface-2: #1c1c1e;
@@ -81,7 +123,8 @@ code {
     radial-gradient(ellipse at 13% 82%, rgba(163, 207, 229, 0.48), transparent 38%),
     radial-gradient(ellipse at 92% 72%, rgba(229, 247, 255, 0.84), transparent 34%),
     linear-gradient(145deg, #f4fbfe 0%, #c8dde8 52%, #f8fcfd 100%);
-  background-size: 24px 24px, 24px 24px, auto, auto, auto, auto;
+  background-size: 28px 28px, 28px 28px, 110% 110%, 120% 120%, 115% 115%, auto;
+  animation: mist-page-flow 28s ease-in-out infinite;
   padding: 0;
   position: relative;
 }
@@ -94,6 +137,7 @@ code {
   background-image: radial-gradient(rgba(78, 116, 136, 0.18) 0.6px, transparent 0.6px);
   background-size: 4px 4px;
   opacity: 0.14;
+  animation: mist-grain-drift 34s ease-in-out infinite;
 }
 
 .phone-container {
@@ -109,7 +153,8 @@ code {
     radial-gradient(ellipse at 12% 82%, rgba(151, 203, 229, 0.56), transparent 40%),
     radial-gradient(ellipse at 94% 68%, rgba(225, 247, 255, 0.9), transparent 36%),
     linear-gradient(145deg, #f4fbfe 0%, #c7dce7 52%, #f9fdff 100%);
-  background-size: 24px 24px, 24px 24px, auto, auto, auto, auto;
+  background-size: 26px 26px, 26px 26px, 112% 112%, 118% 118%, 116% 116%, auto;
+  animation: mist-phone-flow 24s ease-in-out infinite;
   backdrop-filter: blur(34px) saturate(150%);
   -webkit-backdrop-filter: blur(34px) saturate(150%);
   overflow: hidden;
@@ -619,4 +664,15 @@ li {
 
 .messages__item--image-favorite[aria-pressed="true"] {
   color: var(--caution);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
