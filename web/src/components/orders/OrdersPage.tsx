@@ -5,22 +5,10 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { fetchOrders } from "../../api/ordersApi";
 import { fetchHistory } from "../../api/historyApi";
 import { getOrCreateUserId } from "../../lib/identity";
+import { parseMonthlyBudget } from "../../lib/budget";
 import type { OrderData } from "../../types/orders";
 
 type LoadState = "loading" | "ready" | "error";
-
-const MONTHLY_BUDGET_PATTERN =
-  /(?:monthly\s+budget|月预算|每月预算)\D*?(\d+(?:\.\d+)?)/i;
-
-const parseMonthlyBudget = (context: string): number | null => {
-  const matches = context.match(new RegExp(MONTHLY_BUDGET_PATTERN, "gi"));
-  if (!matches) return null;
-  const latest = matches[matches.length - 1];
-  const match = latest.match(MONTHLY_BUDGET_PATTERN);
-  if (!match) return null;
-  const budget = Number(match[1]);
-  return Number.isFinite(budget) && budget > 0 ? budget : null;
-};
 
 interface OrdersPageProps {
   refreshSignal: number;

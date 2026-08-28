@@ -2,6 +2,7 @@ import re
 
 from openai import OpenAI
 from .state import State
+from .budget import extract_monthly_budget, format_monthly_budget
 from ..tools.functions import summary_function, parse_tool_call_fallback
 import requests
 import json
@@ -77,6 +78,7 @@ class SummaryAgent:
         ]
 
         start = time.monotonic()
+        persisted_budget = extract_monthly_budget(state.context)
         if len(state.context) > self.memory_length:
             logging.info(f"SummaryAgent.invoke() | Context length is greater than memory length")
             response = self.model.chat.completions.create(
@@ -103,6 +105,13 @@ class SummaryAgent:
                     logging.warning("SummaryAgent.invoke() | Fallback parse failed; keeping existing context rather than storing raw content.")
             else:
                 logging.error("SummaryAgent.invoke() | No tool_calls or content in response, keeping existing context.")
+            if persisted_budget is not None and extract_monthly_budget(
+                output_state.context
+            ) != persisted_budget:
+                budget_line = format_monthly_budget(persisted_budget)
+                output_state.context = (
+                    f"{budget_line} {output_state.context}".strip()
+                )
             logging.info(f"SummaryAgent.invoke() | Returning final state with response: {output_state.context[:100]}")
         else:
             logging.info(f"SummaryAgent.invoke() | Context length is less than memory length -- writing to memory.")

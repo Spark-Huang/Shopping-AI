@@ -6,7 +6,6 @@ export interface ChatMessage {
   productName: string;
   isWelcome?: boolean;
   isHistory?: boolean;
-  showOnboardingActions?: boolean;
   exampleQuestions?: string[];
 }
 

@@ -21,24 +21,19 @@ describe("ChatMessage marketing interactions", () => {
     expect(screen.queryAllByText(/Your AI shopper says no/i)).toHaveLength(0);
   });
 
-  it("renders all onboarding chips and saves a preset budget", () => {
-    const onActionClick = vi.fn();
-
+  it("renders example questions without first-run budget controls", () => {
     render(
       <ChatMessage
         role="assistant"
         content="Welcome"
         productName=""
-        showOnboardingActions
-        onActionClick={onActionClick}
+        exampleQuestions={["Show me summer dresses", "Add a scarf to my cart"]}
       />
     );
 
-    expect(screen.getByText("🛡️ Set my monthly budget")).toBeTruthy();
-    expect(screen.getByText("Browse dresses")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "$50" }));
-    expect(onActionClick).toHaveBeenCalledWith("budget:50");
+    expect(screen.getAllByTestId("example-chip")).toHaveLength(2);
+    expect(screen.queryByText("🛡️ Set my monthly budget")).toBeNull();
+    expect(screen.queryByText("$50")).toBeNull();
   });
 
   it("renders shareable says-no bubbles for budget warnings", () => {

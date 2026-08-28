@@ -13,6 +13,7 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 from langgraph.config import get_stream_writer
 
+from ..budget import extract_monthly_budget
 from ..state import State
 from ...tools.functions import (
     add_to_cart_function,
@@ -42,6 +43,8 @@ logger = logging.getLogger(__name__)
 
 class CartAgent(ReferenceResolutionMixin, CatalogMatchMixin, MemoryClientMixin):
     _CATALOG_LOOKUP_K = 5
+    _IMPULSE_ITEM_VALUE = 150.0
+    _IMPULSE_LINE_COUNT = 3
     def __init__(self,
             config,
         ) -> None:
@@ -252,6 +255,13 @@ class CartAgent(ReferenceResolutionMixin, CatalogMatchMixin, MemoryClientMixin):
                 quantity = tool_args["quantity"]
                 output_state.response = self._add_to_cart(state.user_id, item_name, quantity)
                 output_state.cart = self._get_cart(state.user_id)
+                gentle_impulse_note = self._maybe_impulse_budget_note(
+                    output_state.response,
+                    output_state.cart,
+                    state.user_id,
+                )
+                if gentle_impulse_note:
+                    output_state.response += f"\n{gentle_impulse_note}"
             
             elif tool_name == "remove_from_cart":
                 logging.info(f"CartAgent.invoke() | Removing from cart")
@@ -339,6 +349,53 @@ class CartAgent(ReferenceResolutionMixin, CatalogMatchMixin, MemoryClientMixin):
             logging.info(f"CartAgent.invoke() | Returning final state with response: {output_state.response}")
 
             return output_state
+
+    def _maybe_impulse_budget_note(
+        self, add_response: str, cart, user_id: int
+    ) -> str | None:
+        if add_response.startswith("Failed") or "No such item" in add_response:
+            return None
+        if sum(item.get("amount", 0) or 0 for item in cart.contents) < 3:
+            return None
+        priced_items = [
+            (float(item["price"]), item.get("amount", 1) or 1)
+            for item in cart.contents
+            if item.get("price") is not None
+        ]
+        if len(priced_items) < 3 or not any(
+            price >= self._IMPULSE_ITEM_VALUE for price, _amount in priced_items
+        ):
+            return None
+
+        cart_total = sum(price * amount for price, amount in priced_items)
+        if cart_total < self._IMPULSE_ITEM_VALUE * self._IMPULSE_LINE_COUNT:
+            return None
+
+        budget = extract_monthly_budget(
+            self._get_context_for_impulse_note(user_id)
+        )
+        if budget is not None:
+            return (
+                f"Budget alert: your cart total of ${cart_total:.2f} is above your "
+                f"${budget:.2f} monthly budget. If now is the right time to buy, no problem; "
+                "otherwise I can help you compare or remove items."
+            )
+        return (
+            f"Gentle note: your cart now totals ${cart_total:.2f} and includes a "
+            "higher-priced item. If you'd like a spending reference, set a budget in Me; "
+            "otherwise feel free to keep browsing."
+        )
+
+    def _get_context_for_impulse_note(self, user_id: int) -> str:
+        try:
+            response = requests.get(
+                f"{self.memory_base_url}/user/{user_id}/context", timeout=10
+            )
+            response.raise_for_status()
+            return response.json().get("context", "")
+        except (requests.RequestException, ValueError, KeyError):
+            return ""
+
 
 _extract_ordinal_position = _extract_ordinal_position
 _strip_ordinals = _strip_ordinals

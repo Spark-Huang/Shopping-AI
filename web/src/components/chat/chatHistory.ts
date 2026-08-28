@@ -18,11 +18,3 @@ export const splitHistoryIntoBubbles = (context: string): string[] => {
         : readable;
     });
 };
-
-export const hasMonthlyBudgetLine = (
-  context: string,
-  budgetLine: string
-): boolean => {
-  const escaped = budgetLine.replace(/[$\\.]/g, "\\$&");
-  return new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`, "i").test(context);
-};

@@ -44,13 +44,11 @@ export interface ChatMessageProps {
   isWelcome?: boolean;
   exampleQuestions?: string[];
   onExampleClick?: (question: string) => void;
-  onActionClick?: (action: string) => void;
   onAddToCart?: (product: ImageContent | string) => void;
   cartAddInFlight?: boolean;
   onToggleFavorite?: (product: ImageContent) => void;
   isFavorite?: boolean;
   isHistory?: boolean;
-  showOnboardingActions?: boolean;
 }
 
 export interface ProductInfo {

@@ -327,6 +327,38 @@ li {
   line-height: 1.45;
 }
 
+.me-page__budget {
+  margin-bottom: 4px;
+}
+
+.me-page__budget-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 12px;
+}
+
+.me-page__budget-form input {
+  width: 104px;
+  padding: 6px 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.me-page__budget-form button {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--brand-primary);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 /* D6: clickable entry rows (Orders / Favorites) */
 .me-page__row--link {
   width: 100%;

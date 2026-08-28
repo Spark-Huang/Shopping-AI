@@ -145,6 +145,23 @@ class TestSummaryAgentInvoke:
         assert len(post_recorder.calls) == 1
         assert post_recorder.calls[0].payload == {"new_context": "summary-of-x-500"}
 
+    def test_summarization_preserves_monthly_budget(
+        self, summary_agent: SummaryAgent, post_recorder: _PostRecorder
+    ) -> None:
+        _stub_tool_call_response(summary_agent, "Condensed shopping history")
+        state = State(
+            user_id=1,
+            query="add item",
+            context="MONTHLY BUDGET: $75.00 " + ("x" * 500),
+        )
+
+        out = summary_agent.invoke(state, verbose=False)
+
+        assert out.context.startswith("MONTHLY BUDGET: $75.00")
+        assert post_recorder.calls[0].payload == {
+            "new_context": "MONTHLY BUDGET: $75.00 Condensed shopping history"
+        }
+
     def test_fallback_json_parse_used_when_tool_calls_missing(
         self, summary_agent: SummaryAgent, post_recorder: _PostRecorder
     ) -> None:

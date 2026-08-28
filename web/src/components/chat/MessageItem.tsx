@@ -26,12 +26,10 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
       isWelcome,
       exampleQuestions,
       onExampleClick,
-      onActionClick,
       onAddToCart,
       onToggleFavorite,
       isFavorite,
       isHistory,
-      showOnboardingActions,
       cartAddInFlight,
     },
     ref
@@ -99,10 +97,6 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
       // caller passes exampleQuestions, each entry is rendered as a chip
       // that sends the question on click.
       const showExamples = !!exampleQuestions && exampleQuestions.length > 0;
-      const onboardingActions = t("chatbox.onboardingActions", {
-        returnObjects: true,
-      }) as Array<{ action: string; label: string }>;
-
       return (
         <div
           ref={ref}
@@ -172,58 +166,6 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
                     {question}
                   </button>
                 ))}
-              </div>
-            )}
-            {showOnboardingActions && (
-              <div className="messages__onboarding-actions">
-                {onboardingActions.map(({ action, label }) => (
-                  <button
-                    key={action}
-                    type="button"
-                    className="messages__onboarding-action"
-                    data-action={action}
-                    onClick={() => onActionClick?.(action)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-            {showOnboardingActions && (
-              <div className="messages__budget-form" data-testid="budget-form">
-                {[25, 50, 100].map((amount) => (
-                  <button
-                    key={amount}
-                    type="button"
-                    className="messages__budget-option"
-                    onClick={() => onActionClick?.(`budget:${amount}`)}
-                  >
-                    ${amount}
-                  </button>
-                ))}
-                <form
-                  className="messages__budget-custom"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const input =
-                      event.currentTarget.elements.namedItem("budget");
-                    if (input instanceof HTMLInputElement) {
-                      onActionClick?.(`budget:${input.value.trim()}`);
-                    }
-                  }}
-                >
-                  <span aria-hidden="true">$</span>
-                  <input
-                    name="budget"
-                    type="number"
-                    min={1}
-                    step="1"
-                    inputMode="numeric"
-                    aria-label={t("chatbox.customBudgetLabel")}
-                    placeholder={t("chatbox.customBudgetPlaceholder")}
-                  />
-                  <button type="submit">{t("chatbox.saveBudget")}</button>
-                </form>
               </div>
             )}
           </div>

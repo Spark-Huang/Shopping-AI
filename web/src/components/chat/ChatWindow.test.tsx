@@ -38,7 +38,6 @@ const finishWelcomeTypewriter = async () => {
   for (let elapsed = 0; elapsed < 4000; elapsed += 100) {
     await vi.advanceTimersByTimeAsync(100);
     if (
-      screen.queryAllByTestId("budget-form").length > 0 &&
       screen.queryAllByTestId("example-chip").length === 5
     )
       return;
@@ -102,13 +101,11 @@ describe("Chatbox user identity replay behavior", () => {
         await finishWelcomeTypewriter();
         expect(
           screen.getByText(
-            "Welcome 👋 Set a monthly spending limit before you browse, or jump straight in."
+            "Welcome 👋 What would you like to shop for today?"
           )
         ).toBeTruthy();
-        expect(screen.getAllByTestId("budget-form").length).toBeGreaterThan(0);
         expect(screen.getAllByTestId("example-chip")).toHaveLength(5);
-        expect(screen.getAllByText("🛡️ Set my monthly budget")[0]).toBeTruthy();
-        expect(screen.getAllByText("Browse dresses")[0]).toBeTruthy();
+        expect(screen.queryByText(/monthly spending limit|impulse buy/i)).toBeNull();
       }
       expect(localStorage.getItem("shopping_user_id")).toBe(currentUserId);
       expect(sessionStorage.getItem("shopping_user_id")).toBeNull();
@@ -167,30 +164,17 @@ describe("Chatbox user identity replay behavior", () => {
     ).toBeTruthy();
   });
 
-  it("does not append a duplicate monthly budget line", async () => {
+  it("does not show first-run budget setup controls", async () => {
     requestHistory.mockResolvedValue({
       ok: true,
       json: async () => ({
         context: "",
       }),
     });
-    const view = renderChatbox();
+    renderChatbox();
     await finishWelcomeTypewriter();
 
-    requestHistory.mockClear();
-    requestHistory.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        context: "Earlier recommendation MONTHLY BUDGET: $50.00",
-      }),
-    });
-    fireEvent.click(screen.getAllByRole("button", { name: "$50" })[0]);
-
-    await vi.advanceTimersByTimeAsync(0);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(requestHistory).toHaveBeenCalledTimes(1);
-    expect(String(requestHistory.mock.calls[0][0])).toBe("/api/context/1");
-    expect(requestHistory.mock.calls[0][1]?.method).toBeUndefined();
-    view.unmount();
+    expect(screen.queryByTestId("budget-form")).toBeNull();
+    expect(screen.queryByRole("button", { name: /budget/i })).toBeNull();
   });
 });

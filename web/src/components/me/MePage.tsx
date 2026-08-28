@@ -9,6 +9,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 import Switch from "@mui/material/Switch";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
@@ -18,8 +19,10 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import { setAppLanguage, type AppLang } from "../../i18n";
 import OrdersPage from "../orders/OrdersPage";
+import { addContext, fetchHistory } from "../../api/historyApi";
 import { markPurchased } from "../../api/ordersApi";
 import { getOrCreateUserId } from "../../lib/identity";
+import { parseMonthlyBudget, replaceMonthlyBudget } from "../../lib/budget";
 import { readFavorites } from "../../lib/favorites";
 import type { ImageContent } from "../../types/chat";
 
@@ -51,7 +54,21 @@ const MePage: React.FC<MePageProps> = ({
   const [favorites, setFavorites] = useState<ImageContent[]>([]);
   const [favoriteSignal, setFavoriteSignal] = useState(0);
   const [orderSignal, setOrderSignal] = useState(0);
-  const [markingPurchased, setMarkingPurchased] = useState<Set<string>>(new Set());
+  const [markingPurchased, setMarkingPurchased] = useState<Set<string>>(
+    new Set()
+  );
+  const [budget, setBudget] = useState<number | null>(null);
+
+  const loadBudget = useCallback(async () => {
+    const history = await fetchHistory(getOrCreateUserId());
+    setBudget(parseMonthlyBudget(history.context || ""));
+  }, []);
+
+  useEffect(() => {
+    void loadBudget().catch((error) => {
+      console.error("MePage: failed to load monthly budget", error);
+    });
+  }, [loadBudget]);
 
   useEffect(() => {
     const syncFavorites = () => setFavorites(readFavorites());
@@ -65,28 +82,65 @@ const MePage: React.FC<MePageProps> = ({
     setAppLanguage(next);
   };
 
-  const markFavoritePurchased = useCallback(async (product: ImageContent) => {
-    if (markingPurchased.has(product.productName)) return;
-    setMarkingPurchased(current => new Set(current).add(product.productName));
-    try {
-      await markPurchased(getOrCreateUserId(), {
-        item: product.productName,
-        price: product.price ?? null,
-        note: "Marked from Favorites",
-      });
-      setOrderSignal(value => value + 1);
-    } catch (error) {
-      console.error("MePage: failed to mark favorite purchased", error);
-      setMarkingPurchased(current => {
-        const next = new Set(current);
-        next.delete(product.productName);
-        return next;
-      });
+  const saveBudget = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const input = event.currentTarget.elements.namedItem("budget");
+    if (!(input instanceof HTMLInputElement)) return;
+    const value = Number(input.value.trim());
+    if (!Number.isFinite(value) || value <= 0) {
+      toast.error(t("me.budgetInvalid"));
+      return;
     }
-  }, [markingPurchased]);
+
+    try {
+      const userId = getOrCreateUserId();
+      const history = await fetchHistory(userId);
+      await addContext(
+        userId,
+        replaceMonthlyBudget(history.context || "", value)
+      );
+      setBudget(value);
+      input.value = "";
+      toast.success(t("me.budgetSaved", { budget: value.toFixed(2) }));
+    } catch (error) {
+      console.error("MePage: failed to save monthly budget", error);
+      toast.error(t("me.budgetSaveFailed"));
+    }
+  };
+
+  const markFavoritePurchased = useCallback(
+    async (product: ImageContent) => {
+      if (markingPurchased.has(product.productName)) return;
+      setMarkingPurchased((current) =>
+        new Set(current).add(product.productName)
+      );
+      try {
+        await markPurchased(getOrCreateUserId(), {
+          item: product.productName,
+          price: product.price ?? null,
+          note: "Marked from Favorites",
+        });
+        setOrderSignal((value) => value + 1);
+      } catch (error) {
+        console.error("MePage: failed to mark favorite purchased", error);
+        setMarkingPurchased((current) => {
+          const next = new Set(current);
+          next.delete(product.productName);
+          return next;
+        });
+      }
+    },
+    [markingPurchased]
+  );
 
   if (view === "orders") {
-    return <OrdersPage refreshSignal={orderSignal} onBack={() => setView("root")} onOrderChange={onOrderChange} />;
+    return (
+      <OrdersPage
+        refreshSignal={orderSignal}
+        onBack={() => setView("root")}
+        onOrderChange={onOrderChange}
+      />
+    );
   }
   if (view === "favorites") {
     return (
@@ -102,18 +156,22 @@ const MePage: React.FC<MePageProps> = ({
         </button>
         {favorites.length === 0 ? (
           <div className="me-empty" role="status">
-            <span className="me-empty__icon"><FavoriteBorderOutlinedIcon /></span>
+            <span className="me-empty__icon">
+              <FavoriteBorderOutlinedIcon />
+            </span>
             <p className="me-empty__title">{t("me.favoritesEmpty")}</p>
             <p className="me-empty__hint">{t("me.emptyBrowseHint")}</p>
           </div>
         ) : (
           <div className="favorites-list">
-            {favorites.map(product => (
+            {favorites.map((product) => (
               <article className="favorites-item" key={product.productName}>
                 <img src={product.productUrl} alt={product.productName} />
                 <div>
                   <h5>{product.productName}</h5>
-                  {product.price != null && <span>${product.price.toFixed(2)}</span>}
+                  {product.price != null && (
+                    <span>${product.price.toFixed(2)}</span>
+                  )}
                   <div className="favorites-item__actions">
                     <button
                       type="button"
@@ -181,7 +239,7 @@ const MePage: React.FC<MePageProps> = ({
         type="button"
         className="me-page__row me-page__row--link"
         onClick={() => {
-          setFavoriteSignal(value => value + 1);
+          setFavoriteSignal((value) => value + 1);
           setView("favorites");
         }}
         data-testid="me-entry-favorites"
@@ -191,6 +249,28 @@ const MePage: React.FC<MePageProps> = ({
         </span>
         <span className="me-page__row-label">{t("me.favorites")}</span>
       </button>
+
+      <div className="me-page__budget" data-testid="me-budget">
+        <div className="me-page__row">
+          <span className="me-page__row-label">{t("me.budget")}</span>
+          <span className="me-page__row-value">
+            {budget == null ? t("me.budgetValue") : `$${budget.toFixed(2)}`}
+          </span>
+        </div>
+        <p className="me-page__row-hint">{t("me.budgetHint")}</p>
+        <form className="me-page__budget-form" onSubmit={saveBudget}>
+          <input
+            name="budget"
+            type="number"
+            min={1}
+            step="0.01"
+            inputMode="decimal"
+            aria-label={t("me.budgetLabel")}
+            placeholder={t("me.budgetPlaceholder")}
+          />
+          <button type="submit">{t("me.saveBudget")}</button>
+        </form>
+      </div>
 
       {/* Language row */}
       <div className="me-page__row">
@@ -215,18 +295,16 @@ const MePage: React.FC<MePageProps> = ({
         <Switch
           checked={safetyEnabled}
           onChange={(event) => onSafetyChange(event.target.checked)}
-          inputProps={{
-            "aria-label": t("me.safety"),
-            "data-testid": "safety-switch",
-          } as React.InputHTMLAttributes<HTMLInputElement>}
+          inputProps={
+            {
+              "aria-label": t("me.safety"),
+              "data-testid": "safety-switch",
+            } as React.InputHTMLAttributes<HTMLInputElement>
+          }
         />
       </div>
       <p className="me-page__row-hint">
-        {t(
-          safetyEnabled
-            ? "me.safetyOnHint"
-            : "me.safetyOffHint"
-        )}
+        {t(safetyEnabled ? "me.safetyOnHint" : "me.safetyOffHint")}
       </p>
 
       {/* Version row */}

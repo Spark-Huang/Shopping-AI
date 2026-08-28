@@ -14,7 +14,7 @@ import {
 } from "../../lib/identity";
 import { readFavorites, toggleFavorite } from "../../lib/favorites";
 import type { ImageContent } from "../../types/chat";
-import { addContext, fetchHistory } from "../../api/historyApi";
+import { fetchHistory } from "../../api/historyApi";
 import { addCartProduct } from "../../api/cartApi";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,10 +22,7 @@ import {
   createImagePreview,
   validateImageFile,
 } from "./chatInput";
-import {
-  hasMonthlyBudgetLine,
-  splitHistoryIntoBubbles,
-} from "./chatHistory";
+import { splitHistoryIntoBubbles } from "./chatHistory";
 import { readChatStream } from "./ChatWindow.useStream";
 import { scheduleSession, sleep } from "./streamSession";
 import type { ChatMessage } from "./ChatWindow.types";
@@ -129,8 +126,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
     content: any,
     productName: string = "",
     isWelcome: boolean = false,
-    isHistory: boolean = false,
-    showOnboardingActions: boolean = false
+    isHistory: boolean = false
   ) => {
     setMessages((prevMessages) => {
       const newMessages = [
@@ -141,7 +137,6 @@ const Chatbox: React.FC<ChatboxProps> = ({
           productName,
           isWelcome,
           isHistory,
-          showOnboardingActions,
         },
       ];
       messageRefs.current = newMessages.map(
@@ -328,7 +323,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
     }
 
     await sleep(1000);
-    addMessage("assistant", "", "", true, false, true);
+    addMessage("assistant", "", "", true);
 
     await sleep(1000);
     const introduction = t("chatbox.introduction");
@@ -347,8 +342,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
 
   useEffect(() => {
     setMessages((prev) => {
-      const hasOnboarding =
-        prev.length === 1 && prev[0].isWelcome && prev[0].showOnboardingActions;
+      const hasOnboarding = prev.length === 1 && prev[0].isWelcome;
       return hasOnboarding
         ? [{ ...prev[0], content: t("chatbox.introduction") }]
         : prev;
@@ -360,35 +354,6 @@ const Chatbox: React.FC<ChatboxProps> = ({
     if (isLoading) return;
     setNewMessage(question);
     handleSendMessage(question);
-  };
-
-  const handleOnboardingAction = async (action: string) => {
-    if (action === "browse") {
-      handleExampleClick(t("chatbox.exampleQuestions.1"));
-      return;
-    }
-    if (!action.startsWith("budget:")) return;
-
-    const budgetValue = Number(action.slice("budget:".length));
-    if (!Number.isFinite(budgetValue) || budgetValue <= 0) {
-      toast.error(t("chatbox.budgetInvalid"));
-      return;
-    }
-    try {
-      const history = await fetchHistory(getOrCreateUserId());
-      const budgetLine = `MONTHLY BUDGET: $${budgetValue.toFixed(2)}`;
-      if (hasMonthlyBudgetLine(history.context, budgetLine)) return;
-      await addContext(
-        getOrCreateUserId(),
-        budgetLine
-      );
-      toast.success(
-        t("chatbox.budgetSaved", { budget: budgetValue.toFixed(2) })
-      );
-    } catch (error) {
-      console.error("Chatbox: budget onboarding failed", error);
-      toast.error(t("chatbox.budgetSaveFailed"));
-    }
   };
 
   // Chips should appear only after the welcome typewriter finishes; otherwise
@@ -567,8 +532,6 @@ const Chatbox: React.FC<ChatboxProps> = ({
                     : undefined
                 }
                 onExampleClick={handleExampleClick}
-                onActionClick={handleOnboardingAction}
-                showOnboardingActions={msg.showOnboardingActions}
                 onAddToCart={
                   msg.role === "image_row" ? handleAddToCart : undefined
                 }
