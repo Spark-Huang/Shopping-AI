@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote_from_bytes
 from xml.etree.ElementTree import fromstring
 
 
@@ -36,7 +36,7 @@ class Product:
 
 
 def search_url(keyword: str, page: int = 1) -> str:
-    encoded = quote(keyword.encode("gbk"))
+    encoded = quote_from_bytes(keyword.encode("gbk"))
     return (
         "http://search.dangdang.com/"
         f"?key={encoded}&act=input&page_index={max(1, page)}"

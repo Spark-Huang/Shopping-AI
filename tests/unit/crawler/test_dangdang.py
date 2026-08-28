@@ -1,4 +1,4 @@
-from crawler.dangdang import parse_products
+from crawler.dangdang import parse_products, search_url
 
 
 def test_parse_products_extracts_real_catalog_fields():
@@ -14,3 +14,7 @@ def test_parse_products_extracts_real_catalog_fields():
     assert products[0].url == "https://product.dangdang.com/294857.html"
     assert products[0].price == 69.0
     assert products[0].image == "https://img.example-cdn.local/1.jpg"
+
+
+def test_search_url_encodes_gbk_spaces():
+    assert "key=%B1%A3%CE%C2%B1%AD" in search_url("保温杯")
