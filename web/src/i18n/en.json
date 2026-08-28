@@ -84,6 +84,15 @@
     "budgetInvalid": "Enter a monthly budget greater than $0.",
     "budgetSaved": "Monthly budget set to ${{budget}} ✓",
     "budgetSaveFailed": "Could not save your monthly budget yet.",
+    "dataFreshness": "Data freshness",
+    "freshnessValue": "{{hours}} hours",
+    "freshnessHint": "Live products are reused within this TTL; older results are recrawled.",
+    "freshnessLabel": "Data freshness in hours",
+    "freshnessPlaceholder": "Hours",
+    "saveFreshness": "Save freshness",
+    "freshnessInvalid": "Enter a data freshness value greater than 0 hours.",
+    "freshnessSaved": "Data freshness set to {{hours}} hours ✓",
+    "freshnessSaveFailed": "Could not save data freshness right now.",
     "languageToggle": "中文",
     "version": "Version",
     "orders": "Orders",
@@ -118,5 +127,14 @@
     "switchToRegister": "New here? Create an account",
     "loginFailed": "Sign in failed. Please try again.",
     "registerFailed": "Registration failed. Please try again."
+  },
+  "sessions": {
+    "toggle": "History",
+    "new": "New chat",
+    "untitled": "Untitled",
+    "empty": "No saved conversations yet.",
+    "loadFailed": "Could not load conversations.",
+    "deleteFailed": "Could not delete this conversation.",
+    "delete": "Delete {{title}}"
   }
 }

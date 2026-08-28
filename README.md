@@ -5,7 +5,7 @@ Shopping AI is a bilingual shopping assistant that combines product search, cart
 ## Services
 
 - **orchestrator** — coordinates routing, retrieval, cart operations, conversation, and timing.
-- **search** — embeds and queries the neutral product catalog with Milvus.
+- **search** — embeds and queries the live external product catalog with Milvus.
 - **memory** — persists messages, user context, cart items, and orders in SQLite; optionally builds long-term memory with cognee and Milvus.
 - **safety** — applies input and output checks through an OpenAI-compatible endpoint.
 - **web** — provides the responsive React and TypeScript chat interface.
@@ -23,7 +23,17 @@ Shopping AI is a bilingual shopping assistant that combines product search, cart
 
 4. Open `http://localhost:3000`.
 
-The catalog is `platform/data/products.csv`. It intentionally contains neutral, self-contained product records and local SVG references; no external demo catalog is required.
+### Live Product Data & Freshness
+
+Product search starts from the indexed Milvus catalog and refreshes live Dangdang results on demand. Every crawled record carries `crawled_at`. A query reuses records within the configured TTL; once the TTL expires it attempts a crawl, embeds the new records, and returns them. If crawling or embedding fails, the existing Milvus results are returned with `stale: true` so the shopping flow is never blocked.
+
+Set `DATA_FRESHNESS_HOURS` (default: `24`) for the deployment default. Users can change the value from **Me → Data freshness**; the setting takes precedence over the environment variable. `DATA_FRESHNESS_FILE` overrides the storage path for that setting.
+
+### 商品数据与新鲜度
+
+商品搜索基于 Milvus 中已索引的目录，并按需刷新 Dangdang 实时结果。每条爬取记录都带 `crawled_at`：TTL 内直接复用；超过 TTL 会尝试重爬、写入向量库后返回。若爬取或向量化失败，则返回现有数据并标记 `stale: true`，不阻塞主流程。
+
+通过 `DATA_FRESHNESS_HOURS` 配置部署默认值（默认 24 小时）。用户可在 **我的 → 数据新鲜度** 中修改；该设置优先于环境变量。`DATA_FRESHNESS_FILE` 可覆盖设置存储路径。
 
 ## Local Development
 

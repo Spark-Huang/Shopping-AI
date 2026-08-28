@@ -20,6 +20,7 @@ import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import { setAppLanguage, type AppLang } from "../../i18n";
 import OrdersPage from "../orders/OrdersPage";
 import { addContext, fetchHistory } from "../../api/historyApi";
+import { fetchFreshness, saveFreshness } from "../../api/freshnessApi";
 import { markPurchased } from "../../api/ordersApi";
 import { getOrCreateUserId } from "../../lib/identity";
 import { getAuthUser } from "../../lib/auth";
@@ -61,10 +62,16 @@ const MePage: React.FC<MePageProps> = ({
     new Set()
   );
   const [budget, setBudget] = useState<number | null>(null);
+  const [freshnessHours, setFreshnessHours] = useState<number | null>(null);
 
   const loadBudget = useCallback(async () => {
     const history = await fetchHistory(getOrCreateUserId());
     setBudget(parseMonthlyBudget(history.context || ""));
+  }, []);
+
+  const loadFreshness = useCallback(async () => {
+    const setting = await fetchFreshness();
+    setFreshnessHours(setting.data_freshness_hours);
   }, []);
 
   useEffect(() => {
@@ -72,6 +79,12 @@ const MePage: React.FC<MePageProps> = ({
       console.error("MePage: failed to load monthly budget", error);
     });
   }, [loadBudget]);
+
+  useEffect(() => {
+    void loadFreshness().catch((error) => {
+      console.error("MePage: failed to load data freshness", error);
+    });
+  }, [loadFreshness]);
 
   useEffect(() => {
     const syncFavorites = () => setFavorites(readFavorites());
@@ -108,6 +121,30 @@ const MePage: React.FC<MePageProps> = ({
     } catch (error) {
       console.error("MePage: failed to save monthly budget", error);
       toast.error(t("me.budgetSaveFailed"));
+    }
+  };
+
+  const saveDataFreshness = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+    const input = event.currentTarget.elements.namedItem("dataFreshness");
+    if (!(input instanceof HTMLInputElement)) return;
+    const value = Number(input.value.trim());
+    if (!Number.isFinite(value) || value <= 0) {
+      toast.error(t("me.freshnessInvalid"));
+      return;
+    }
+    try {
+      const setting = await saveFreshness(value);
+      setFreshnessHours(setting.data_freshness_hours);
+      input.value = "";
+      toast.success(
+        t("me.freshnessSaved", { hours: setting.data_freshness_hours })
+      );
+    } catch (error) {
+      console.error("MePage: failed to save data freshness", error);
+      toast.error(t("me.freshnessSaveFailed"));
     }
   };
 
@@ -292,6 +329,32 @@ const MePage: React.FC<MePageProps> = ({
             placeholder={t("me.budgetPlaceholder")}
           />
           <button type="submit">{t("me.saveBudget")}</button>
+        </form>
+      </div>
+
+      <div className="me-page__budget" data-testid="me-data-freshness">
+        <div className="me-page__row">
+          <span className="me-page__row-label">
+            {t("me.dataFreshness")}
+          </span>
+          <span className="me-page__row-value">
+            {freshnessHours == null
+              ? "—"
+              : t("me.freshnessValue", { hours: freshnessHours })}
+          </span>
+        </div>
+        <p className="me-page__row-hint">{t("me.freshnessHint")}</p>
+        <form className="me-page__budget-form" onSubmit={saveDataFreshness}>
+          <input
+            name="dataFreshness"
+            type="number"
+            min={1}
+            step="1"
+            inputMode="numeric"
+            aria-label={t("me.freshnessLabel")}
+            placeholder={t("me.freshnessPlaceholder")}
+          />
+          <button type="submit">{t("me.saveFreshness")}</button>
         </form>
       </div>
 

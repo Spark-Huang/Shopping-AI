@@ -17,6 +17,7 @@ from search.app.filtering import (
     matches_categories,
     milvus_category_expr,
 )
+from search.app.freshness import FreshnessService
 from search.app.images import (
     image_path_to_base64,
     image_url_to_base64,
@@ -68,6 +69,7 @@ class Retriever:
         self.text_collection = config.text_collection
         self.image_collection = config.image_collection
         self.category_prefilter_k = max(config.category_prefilter_k, 1)
+        self.freshness = FreshnessService()
 
         embed_key = os.environ["EMBED_API_KEY"]
         self.text_client = OpenAI(
@@ -123,6 +125,31 @@ class Retriever:
             return text_count > 0
         except Exception:
             return False
+
+    def ingest_products(self, products: list[dict[str, Any]]) -> None:
+        if not products:
+            return
+        texts = [
+            f"{product['name']} | {product['description']} | {product['category']},{product['subcategory']}"
+            for product in products
+        ]
+        embeddings = self.text_embeddings(texts, query_type="passage", verbose=False)
+        successful = [
+            (text, embedding, product)
+            for text, embedding, product in zip(texts, embeddings, products)
+            if embedding is not None
+        ]
+        if successful:
+            chunks, vectors, metadata = zip(*successful)
+            self.text_db.add_embeddings(
+                texts=list(chunks), embeddings=list(vectors), metadatas=list(metadata)
+            )
+
+    def catalog_records(self, keyword: str, limit: int = 4) -> list[dict[str, Any]]:
+        results = self.text_db.similarity_search_with_relevance_scores(
+            keyword, k=max(1, limit)
+        )
+        return [dict(result[0].metadata) for result in results]
 
     def _create_embeddings(
         self,

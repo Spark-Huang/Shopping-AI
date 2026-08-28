@@ -3,8 +3,6 @@
  */
 
 export interface AppConfig {
-  /** Absolute social-crawler image URL; replace the placeholder for each deploy. */
-  ogImageUrl: string;
   api: {
     baseUrl: string;
     port: number;
@@ -12,6 +10,7 @@ export interface AppConfig {
       query: string;
       stream: string;
       health: string;
+      freshness: string;
     };
   };
   features: {
@@ -31,12 +30,7 @@ export interface AppConfig {
 const getConfig = (): AppConfig => {
   // Default to nginx proxy routing, but allow local development to target orchestrator directly.
   const baseUrl = import.meta.env.REACT_APP_API_BASE_URL || '/api';
-  const ogImageUrl =
-    import.meta.env.REACT_APP_OG_IMAGE_URL ||
-    'https://symy-shopping.example.com/og-image.jpg';
-
   return {
-    ogImageUrl,
     api: {
       baseUrl: baseUrl,
       port: 80,
@@ -44,6 +38,7 @@ const getConfig = (): AppConfig => {
         query: '/query',
         stream: '/query/stream',
         health: '/health',
+        freshness: '/config/freshness',
       },
     },
     features: {

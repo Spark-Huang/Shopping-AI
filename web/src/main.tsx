@@ -23,5 +23,5 @@ for (const selector of [
 ]) {
   document
     .querySelector(selector)
-    ?.setAttribute("content", config.ogImageUrl);
+    ?.setAttribute("content", "/og-image.jpg");
 }

@@ -84,6 +84,15 @@
     "budgetInvalid": "请输入大于 $0 的月预算。",
     "budgetSaved": "月预算已设为 ${{budget}} ✓",
     "budgetSaveFailed": "暂时无法保存你的月预算。",
+    "dataFreshness": "数据新鲜度",
+    "freshnessValue": "{{hours}} 小时",
+    "freshnessHint": "TTL 内复用实时商品；超过后会自动重新爬取。",
+    "freshnessLabel": "数据新鲜度（小时）",
+    "freshnessPlaceholder": "小时",
+    "saveFreshness": "保存新鲜度",
+    "freshnessInvalid": "请输入大于 0 小时的数据新鲜度。",
+    "freshnessSaved": "数据新鲜度已设为 {{hours}} 小时 ✓",
+    "freshnessSaveFailed": "暂时无法保存数据新鲜度。",
     "languageToggle": "EN",
     "version": "版本",
     "orders": "订单",
@@ -118,5 +127,14 @@
     "switchToRegister": "还没有账号？去注册",
     "loginFailed": "登录失败，请重试。",
     "registerFailed": "注册失败，请重试。"
+  },
+  "sessions": {
+    "toggle": "历史消息",
+    "new": "新会话",
+    "untitled": "未命名会话",
+    "empty": "还没有保存的会话。",
+    "loadFailed": "无法加载会话。",
+    "deleteFailed": "无法删除该会话。",
+    "delete": "删除 {{title}}"
   }
 }
