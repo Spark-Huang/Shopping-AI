@@ -40,4 +40,3 @@ config-local.yaml
 .DS_Store
 
 # Linked image assets
-web/public/images
