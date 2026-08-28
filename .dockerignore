@@ -1,0 +1,12 @@
+.git
+.env
+.venv/
+.venv-*/
+.local-run/
+**/__pycache__/
+**/.pytest_cache/
+**/node_modules/
+**/build/
+**/dist/
+**/config-local.yaml
+*.db

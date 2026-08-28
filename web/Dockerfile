@@ -1,21 +1,12 @@
-#FROM node:18-alpine
-
-FROM ubuntu:22.04
-
-RUN apt update
-RUN apt install -y \
-    apt-transport-https \
-    curl \
-    software-properties-common
-
-RUN curl -sL https://deb.nodesource.com/setup_21.x | bash -
-RUN apt install -y nodejs
+FROM node:22.22-bookworm-slim
 
 WORKDIR /app
 
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
 COPY . .
-RUN rm -rf /app/public/images && ln -s /app/shared/images /app/public/images
 
-RUN npm install
+EXPOSE 5173
 
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "start", "--", "--host", "0.0.0.0", "--port", "5173"]

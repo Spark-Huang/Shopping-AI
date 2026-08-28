@@ -245,16 +245,16 @@ async def process_query_timing(
         state = create_initial_state(request)
         
         # Process query and collect timing data
-        start_time = time.monotonic()
+        start_time_ns = time.perf_counter_ns()
         out_state_dict = await graph.ainvoke(state)
-        end_time = time.monotonic()
+        elapsed_ns = max(time.perf_counter_ns() - start_time_ns, 1)
         
         logger.info(
             "orchestrator | /query/timing | timings "
             f"(seconds): {out_state_dict['timings']}"
         )
 
-        total_time = end_time - start_time
+        total_time = elapsed_ns / 1_000_000_000
         timings = {**out_state_dict["timings"], "total": total_time}
         timings_ms = {
             key: round(value * 1000, 3) for key, value in timings.items()
