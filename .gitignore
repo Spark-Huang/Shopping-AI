@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+.next/
+
+# Node
+node_modules/
+web/build/
+web/dist/
+web/.next/
+web/.next/
+
+# Local runtime artifacts
+.local-run/
+*.db
+context.db
+tests/.coverage
+search/volumes/
+safety/traces/
+traces/
+
+# Env and local overrides
+.env
+config-local.yaml
+**/config-local.yaml
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Linked image assets
+web/public/images

@@ -1,0 +1,356 @@
+
+"""
+Main FastAPI application for the Shopping AI API.
+
+This module provides the main API endpoints for the shopping assistant,
+including query processing and streaming responses.
+"""
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field as PydanticField
+from typing import Optional, Dict
+from pathlib import Path
+import logging
+import os
+import sys
+import time
+import json
+
+import requests
+
+from .agents.state import Cart, State
+from .agents.planner import PlannerAgent
+from .agents.retrieval_proxy import RetrieverAgent
+from .agents.cart import CartAgent
+from .agents.chatter import ChatterAgent
+from .agents.summarizer import SummaryAgent
+from .graph import create_graph
+from .settings import load_config
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
+logger = logging.getLogger(__name__)
+TIMING_LOG = Path(
+    os.getenv(
+        "QUERY_TIMING_LOG",
+        Path(__file__).resolve().parents[2] / ".local-run" / "query-timings.jsonl",
+    )
+)
+
+
+def initialize_agents(config) -> Dict:
+    """Initialize all agent instances."""
+    return {
+        'planner_agent': PlannerAgent(config=config),
+        'retriever_agent': RetrieverAgent(config=config),
+        'cart_agent': CartAgent(config=config),
+        'chatter_agent': ChatterAgent(config=config),
+        'summary_agent': SummaryAgent(config=config)
+    }
+
+
+# Load configuration and initialize agents
+try:
+    config = load_config()  # Load and validate configuration
+    agents = initialize_agents(config)
+    graph = create_graph(
+        **agents,
+        config=config
+    )
+except Exception as e:
+    logger.error(f"Failed to initialize application: {e}")
+    raise
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="Shopping AI API",
+    description="AI-powered shopping assistant with multi-service architecture",
+    version="1.0.0"
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Request/Response models
+class QueryRequest(BaseModel):
+    """Request model for shopping queries."""
+    user_id: int
+    query: str
+    image: str = ""
+    context: Optional[str] = ""
+    cart: Optional[Cart] = None
+    retrieved: Optional[Dict[str, str]] = {}
+    safety_enabled: Optional[bool] = PydanticField(default=True, alias="safety")
+    image_bool: bool = False
+    language: Optional[str] = ""
+
+
+class QueryResponse(BaseModel):
+    """Response model for shopping queries."""
+    response: str
+    images: Dict[str, str] = {}
+    timings: Dict[str, float] = {}
+    timings_ms: Dict[str, float] = {}
+
+
+def _persist_timings(
+    user_id: int,
+    query: str,
+    timings: Dict[str, float],
+    timings_ms: Dict[str, float],
+) -> None:
+    if not timings:
+        return
+    try:
+        TIMING_LOG.parent.mkdir(parents=True, exist_ok=True)
+        record = {
+            "timestamp": time.time(),
+            "user_id": user_id,
+            "query": query,
+            "timings_s": timings,
+            "timings_ms": timings_ms,
+        }
+        with TIMING_LOG.open("a", encoding="utf-8") as timing_file:
+            timing_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except OSError as exc:
+        logger.warning(f"orchestrator | could not persist query timing: {exc}")
+
+
+def create_initial_state(request: QueryRequest) -> State:
+    """Create initial state from request."""
+    return State(
+        user_id=request.user_id,
+        query=request.query,
+        image=request.image,
+        context=request.context or "",
+        cart=request.cart or Cart(),
+        safety_enabled=request.safety_enabled,
+        language=request.language or "",
+    )
+
+@app.post("/query/stream")
+async def process_query_stream(request: QueryRequest):
+    """
+    Stream responses to user queries in real-time.
+    
+    This endpoint provides streaming responses for responsive UIs
+    and chat-like experiences.
+    """
+    try:
+        logger.info(f"orchestrator | /query/stream | Processing streaming query for user {request.user_id}: {request.query}")
+        
+        # Handle image-only queries
+        if request.image and not request.query:
+            request.query = "The user has submitted an image, and is looking for items from the catalog that appear similar."
+        
+        # Create initial state
+        state = create_initial_state(request)
+        
+        async def send_updates():
+            """Generator function for streaming updates."""
+            try:
+                async for chunk in graph.astream(state, stream_mode="custom"):
+                    yield f"data: {chunk}\n\n"
+                yield "data: [DONE]\n\n"
+            except Exception as e:
+                logger.error(f"Error in streaming: {e}")
+                yield f"data: {json.dumps({'type': 'error', 'payload': str(e)})}\n\n"
+
+        return StreamingResponse(send_updates(), media_type="text/event-stream")
+        
+    except Exception as e:
+        logger.error(f"Error processing streaming query: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/query/timing", response_model=QueryResponse)
+async def process_query_timing(request: QueryRequest):
+    """
+    Process a query and return detailed timing information.
+    
+    This endpoint is useful for performance analysis and debugging.
+    """
+    try:
+        logger.info(f"orchestrator | /query/timing | Processing timing query for user {request.user_id}: {request.query}")
+        
+        # Create initial state
+        state = create_initial_state(request)
+        
+        # Process query and collect timing data
+        start_time = time.monotonic()
+        out_state_dict = await graph.ainvoke(state)
+        end_time = time.monotonic()
+        
+        logger.info(
+            "orchestrator | /query/timing | timings "
+            f"(seconds): {out_state_dict['timings']}"
+        )
+
+        total_time = end_time - start_time
+        timings = {**out_state_dict["timings"], "total": total_time}
+        timings_ms = {
+            key: round(value * 1000, 3) for key, value in timings.items()
+        }
+        _persist_timings(request.user_id, request.query, timings, timings_ms)
+
+        # Create response with timing information
+        response = QueryResponse(
+            response=out_state_dict["response"],
+            images={},
+            timings=timings,
+            timings_ms=timings_ms,
+        )
+
+        logger.info(f"orchestrator | /query | Successfully processed timing query in {total_time:.2f}s")
+        return response
+
+    except Exception as e:
+        logger.error(f"Error processing timing query: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+        
+@app.get("/cart/{user_id}")
+def get_cart(user_id: int):
+    """
+    Read-only proxy to the memory service's cart endpoint.
+    """
+    memory_url = f"{config.memory_base_url}/user/{user_id}/cart"
+    try:
+        response = requests.get(memory_url, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"orchestrator | /cart/{user_id} | memory service call failed: {e}")
+        raise HTTPException(status_code=502, detail="Failed to fetch cart from memory service")
+
+
+@app.post("/cart/{user_id}")
+def add_cart_item(user_id: int, request: Dict):
+    """Persist a displayed product directly, bypassing the agent round trip."""
+    try:
+        response = requests.post(
+            f"{config.memory_base_url}/user/{user_id}/cart/add",
+            json={**request, "idempotent": True},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"orchestrator | POST /cart/{user_id} | memory service call failed: {e}")
+        raise HTTPException(status_code=502, detail="Failed to add cart item")
+
+
+@app.post("/cart/{user_id}/remove")
+def remove_cart_item(user_id: int, request: Dict):
+    """Remove a displayed product after it has been marked as purchased."""
+    try:
+        response = requests.post(
+            f"{config.memory_base_url}/user/{user_id}/cart/remove",
+            json=request,
+            timeout=10,
+        )
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail="Item not in cart")
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"orchestrator | POST /cart/{user_id}/remove | memory service call failed: {e}")
+        raise HTTPException(status_code=502, detail="Failed to remove cart item")
+
+
+@app.get("/orders/{user_id}")
+def get_orders(user_id: int):
+    """Read-only proxy to the memory service's manual-orders endpoint."""
+    try:
+        response = requests.get(f"{config.memory_base_url}/user/{user_id}/orders", timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"orchestrator | /orders/{user_id} | memory service call failed: {e}")
+        raise HTTPException(status_code=502, detail="Failed to fetch orders from memory service")
+
+
+@app.post("/orders/{user_id}")
+def create_order(user_id: int, request: Dict):
+    """Proxy a manual mark-as-purchased action to memory service."""
+    try:
+        response = requests.post(
+            f"{config.memory_base_url}/user/{user_id}/orders",
+            json=request,
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"orchestrator | POST /orders/{user_id} | memory service call failed: {e}")
+        raise HTTPException(status_code=502, detail="Failed to create order in memory service")
+
+@app.get("/context/{user_id}")
+def get_context(user_id: int):
+    """
+    Read-only proxy to the memory service's context endpoint.
+    """
+    memory_url = f"{config.memory_base_url}/user/{user_id}/context"
+    try:
+        response = requests.get(memory_url, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"orchestrator | /context/{user_id} | memory service call failed: {e}")
+        raise HTTPException(status_code=502, detail="Failed to fetch context from memory service")
+
+
+@app.post("/context/{user_id}")
+def add_context(user_id: int, request: Dict):
+    """Persist onboarding facts without requiring a full agent turn."""
+    new_context = str(request.get("new_context", "")).strip()
+    if not new_context:
+        raise HTTPException(status_code=422, detail="new_context must not be empty")
+    try:
+        response = requests.post(
+            f"{config.memory_base_url}/user/{user_id}/context/add",
+            json={"new_context": new_context},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"orchestrator | POST /context/{user_id} | memory service call failed: {e}")
+        raise HTTPException(status_code=502, detail="Failed to update context")
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "version": "1.0.0"
+    }
+
+
+@app.get("/")
+async def root():
+    """Root endpoint with API information."""
+    return {
+        "message": "Shopping AI API",
+        "version": "1.0.0",
+        "endpoints": {
+            "stream": "/query/stream",
+            "timing": "/query/timing",
+            "cart": "/cart/{user_id}",
+            "orders": "/orders/{user_id}",
+            "context": "/context/{user_id}",
+            "health": "/health",
+            "docs": "/docs"
+        }
+    }

@@ -1,0 +1,34 @@
+models:
+  - type: main
+    engine: openai
+    model: openrouter/stealth/ox-alpha
+
+  - type: content_safety
+    engine: openai
+    model: openrouter/stealth/ox-alpha
+
+  - type: topic_control
+    engine: openai
+    model: openrouter/stealth/ox-alpha
+
+bot_messages:
+  refuse to respond: 
+    - "Sorry, I am a shopping assistant and can only help you with your shopping needs."
+
+safety:
+  input:
+    flows:
+      - content safety check input $model=content_safety
+      - topic safety check input $model=topic_control
+  output:
+    flows:
+      - content safety check output $model=content_safety
+    streaming:
+      chunk_size: 200
+      context_size: 50
+
+tracing:
+  enabled: True
+  adapters:
+    - name: FileSystem
+      filepath: './traces/traces.jsonl'

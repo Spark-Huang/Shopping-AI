@@ -1,0 +1,7 @@
+# Configuration override for a hosted OpenAI-compatible API gateway.
+# Apply with CONFIG_OVERRIDE=config-build.yaml and LLM_API_KEY set in .env.
+# Works with any OpenAI-compatible endpoint (LiteLLM, OmniRoute, OpenRouter,
+# vLLM, etc.).
+
+llm_port: "http://llm-gateway:8000/v1"
+llm_name: "openrouter/stealth/ox-alpha"

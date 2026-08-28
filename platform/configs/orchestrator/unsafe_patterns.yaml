@@ -1,0 +1,50 @@
+version: 1
+patterns:
+  # Self-harm and suicide
+  - 自杀
+  - 自残
+  - 伤害自己
+  - 杀死自己
+  - \b自\s*杀\b
+  - \bsuicid(?:e|al)\b
+  - \bself[-\s]?harm\b
+  - \b(?:kill|hurt|harm)\s+(?:myself|me)\b
+
+  # Explosives and weapons
+  - 炸弹
+  - 爆炸物
+  - 爆炸装置
+  - 制造炸弹
+  - 枪支
+  - 买枪
+  - 购买武器
+  - \b(?:build|make|construct)\s+(?:a\s+)?(?:bomb|explosive|pipe\s+bomb|ied)\b
+  - \b(?:bomb|explosive|pipe\s+bomb|ied)\b
+  - \b(?:gun|firearm|rifle|pistol)\b
+  - \b(?:buy|purchase|get|acquire)\s+(?:a\s+)?(?:gun|firearm|rifle|pistol|weapon)\b
+  - \bgun\s+purchase\b
+
+  # Illegal drugs
+  - 海洛因
+  - 毒品
+  - 贩毒
+  - \b(?:cocaine|heroin|meth|methamphetamine|crack)\b
+  - \b(?:buy|purchase|sell|score|cook)\s+(?:cocaine|heroin|meth|methamphetamine|crack)\b
+
+  # Child sexual abuse material and sexual content
+  - 儿童色情
+  - 儿童性内容
+  - 未成年色情
+  - 性内容
+  - \bchild\s+sexual\b
+  - \bchild(?:ren)?\s+(?:porn|pornography|sexual|nude|nudes)\b
+  - \b(?:minor|underage|teen)\s+(?:porn|sexual|nude|nudes)\b
+  - \b(?:porn|pornography)\b
+
+  # Violence against others
+  - 杀人
+  - 暴力
+  - 如何杀人
+  - \bviolence\b
+  - \bkilling\b
+  - \b(?:how\s+to\s+)?(?:murder|stab|strangle)\b

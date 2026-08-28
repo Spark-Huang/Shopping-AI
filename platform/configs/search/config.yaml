@@ -1,0 +1,11 @@
+text_embed_port: "http://llm-gateway:8000/v1"
+text_model_name: "gemini/gemini-embedding-001"
+image_embed_port: "http://llm-gateway:8000/v1"
+image_model_name: ""
+db_port: "http://milvus:19530"
+db_name: "shopping_ai_db"
+sim_threshold: 0.5
+text_collection: "shopping_ai_text"
+image_collection: "shopping_ai_images"
+category_prefilter_k: 50
+data_path: "/app/platform/data/products.csv"

@@ -1,0 +1,8 @@
+fastapi==0.136.1
+langchain-core==1.4.0
+langgraph==1.2.4
+openai==1.97.0
+pydantic==2.13.4
+PyYAML==6.0.3
+requests==2.34.2
+uvicorn==0.35.0
