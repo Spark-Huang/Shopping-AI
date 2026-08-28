@@ -612,7 +612,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
             <div className="button-class">
               <SendIcon
                 sx={{
-                  color: isLoading ? "lightgray" : "#1d4ed8",
+                  color: isLoading ? "var(--text-tertiary)" : "var(--brand-deep)",
                   cursor: isLoading ? "not-allowed" : "pointer",
                 }}
                 onClick={isLoading ? () => {} : () => handleSendMessage()}
@@ -623,7 +623,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
 
             <div className="button-class">
               <CancelIcon
-                sx={{ color: isResetArmed ? "#dc2626" : "#6b7280" }}
+                sx={{ color: isResetArmed ? "var(--danger)" : "var(--text-secondary)" }}
                 onClick={handleResetClick}
                 fontSize="medium"
                 aria-label={t(
@@ -641,7 +641,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
                 aria-label={t("chatbox.uploadLabel")}
                 title={t("chatbox.uploadLabel")}
               >
-                <UploadIcon sx={{ color: "#1d4ed8" }} fontSize="medium" />
+                <UploadIcon sx={{ color: "var(--brand-primary)" }} fontSize="medium" />
               </label>
               <input
                 style={{ display: "none" }}
