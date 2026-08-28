@@ -3,10 +3,6 @@ import { toast } from "react-toastify";
 import SendIcon from "@mui/icons-material/Send";
 import CancelIcon from "@mui/icons-material/Cancel";
 import UploadIcon from "@mui/icons-material/Upload";
-import FormGroup from "@mui/material/FormGroup";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Switch from "@mui/material/Switch";
-import { styled } from "@mui/material/styles";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 
@@ -42,22 +38,6 @@ import type { ChatMessage } from "./ChatWindow.types";
 const NEAR_BOTTOM_PX = 80;
 
 const RESET_CONFIRM_TIMEOUT_MS = 3000;
-
-// Symy brand blue switch
-const CustomSwitch = styled(Switch)(({ theme }) => ({
-  "& .MuiSwitch-switchBase.Mui-checked": {
-    color: "#1d4ed8",
-  },
-  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-    backgroundColor: "rgba(29, 78, 216, 0.45)",
-  },
-  "& .MuiSwitch-switchBase": {
-    color: "#9ca3af",
-  },
-  "& .MuiSwitch-track": {
-    backgroundColor: "var(--glass-border, rgba(0,0,0,0.10))",
-  },
-}));
 
 const Chatbox: React.FC<ChatboxProps> = ({
   requestCommandRef,
@@ -109,14 +89,6 @@ const Chatbox: React.FC<ChatboxProps> = ({
   };
 
   // Event handlers
-  const toggleSafety = () => {
-    const nextState = !safetyEnabled;
-    onSafetyChange(nextState);
-    toast.info(
-      t(nextState ? "chatbox.safetyOnToast" : "chatbox.safetyOffToast")
-    );
-  };
-
   const handleNewMessageChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -559,33 +531,9 @@ const Chatbox: React.FC<ChatboxProps> = ({
     <div className="chatbox-shell">
       <div className="chatbox">
         <div className={`chatbox__support ${isOpen ? "chatbox--active" : ""}`}>
-          {/* Header: title + Safety toggle */}
+          {/* Header */}
           <div className="chatbox__header">
             <h4 className="chatbox__heading--header">{t("chatbox.title")}</h4>
-            <div className="chatbox__safety">
-              <FormGroup>
-                <FormControlLabel
-                  control={
-                    <CustomSwitch
-                      checked={safetyEnabled}
-                      onChange={toggleSafety}
-                      size="small"
-                      inputProps={{
-                        "aria-label": t("chatbox.safety"),
-                      }}
-                    />
-                  }
-                  label={t("chatbox.safety")}
-                />
-              </FormGroup>
-              {/* Microcopy so the toggle is perceivable (PM item 10 /
-                  marketing A5): one line explaining what the state means. */}
-              <p className="chatbox__safety-hint">
-                {safetyEnabled
-                  ? t("chatbox.safetyOnHint")
-                  : t("chatbox.safetyOffHint")}
-              </p>
-            </div>
           </div>
 
           {/* Messages */}

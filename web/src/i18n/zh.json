@@ -12,11 +12,6 @@
   },
   "chatbox": {
     "title": "Shopping AI",
-    "safety": "安全检查",
-    "safetyOnHint": "没有广告 · 没有赞助结果——你看到的推荐不收商家一分钱。",
-    "safetyOffHint": "没有广告 · 没有赞助结果——你看到的推荐不收商家一分钱。",
-    "safetyOnToast": "已开启安全检查",
-    "safetyOffToast": "已关闭安全检查",
     "placeholder": "输入你想找的商品…",
     "sendLabel": "发送消息",
     "resetLabel": "重置对话",

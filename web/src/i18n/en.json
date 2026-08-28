@@ -12,11 +12,6 @@
   },
   "chatbox": {
     "title": "Shopping AI",
-    "safety": "Safety",
-    "safetyOnHint": "No ads · No sponsored results — recommendations never take merchant money.",
-    "safetyOffHint": "No ads · No sponsored results — recommendations never take merchant money.",
-    "safetyOnToast": "Safety checks enabled",
-    "safetyOffToast": "Safety checks disabled",
     "placeholder": "Type something here...",
     "sendLabel": "Send message",
     "resetLabel": "Reset conversation",

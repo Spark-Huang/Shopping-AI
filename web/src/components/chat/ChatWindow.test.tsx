@@ -24,6 +24,16 @@ const renderChatbox = () =>
     />
   );
 
+describe("Chatbox header controls", () => {
+  it("keeps the safety setting out of the chat header", () => {
+    renderChatbox();
+
+    expect(screen.queryByTestId("safety-switch")).toBeNull();
+    expect(screen.queryByText("Safety")).toBeNull();
+    expect(screen.queryByText(/Safety checks/i)).toBeNull();
+  });
+});
+
 const finishWelcomeTypewriter = async () => {
   for (let elapsed = 0; elapsed < 4000; elapsed += 100) {
     await vi.advanceTimersByTimeAsync(100);
