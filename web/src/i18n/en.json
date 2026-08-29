@@ -1,29 +1,42 @@
 {
-  "documentTitle": "Guikela",
+  "documentTitle": "Guikelai | Guizhou Shopping Agent",
+  "brand": {
+    "name": "Guikelai"
+  },
+  "menu": {
+    "newChat": "New chat",
+    "discover": "Browse Guizhou goods",
+    "cart": "Cart",
+    "me": "My profile",
+    "language": "Switch language",
+    "about": "About Guikelai",
+    "version": "Guikelai · Track 3 demo"
+  },
   "footer": {
     "contactUs": "Contact Us",
     "guidelines": "Guidelines & FAQ",
     "privacyPolicy": "Privacy Policy"
   },
   "tabs": {
-    "messages": "Messages",
+    "messages": "Ask",
+    "discover": "Discover",
     "cart": "Cart",
     "me": "Me"
   },
   "chatbox": {
-    "title": "Guikela",
-    "placeholder": "Type something here...",
+    "title": "Guikelai · Guizhou Goods Guide",
+    "placeholder": "Recipient, budget, taste, or Guizhou product…",
     "sendLabel": "Send message",
     "resetLabel": "Reset conversation",
     "resetConfirmLabel": "Confirm clearing the conversation?",
     "uploadLabel": "Upload a photo to find similar items",
-    "introduction": "Welcome 👋 What would you like to shop for today?",
+    "introduction": "Welcome to Guikelai 👋 Tell me who it is for, your budget, and preferred tastes. I will help you choose Guizhou foods, teas, and heritage crafts.",
     "exampleQuestions": [
-      "Do you have any midi skirts?",
-      "Show me summer dresses under $150",
-      "Find me shoes like this photo (upload an image!)",
-      "Add the Floral Camisole in White to my cart",
-      "What are your best-selling accessories?"
+      "Build a Guizhou gift set under CNY 100",
+      "What Guizhou snacks are not too spicy?",
+      "Recommend a Guizhou tea for an elder",
+      "Compare Miao embroidery and batik",
+      "Pick three gifts for a first-time visitor"
     ],
     "addToCart": "Add to cart",
     "addToCartCommand": "Add the {{name}} to my cart",
@@ -57,7 +70,7 @@
     "title": "Cart",
     "loading": "Loading cart…",
     "error": "Could not load cart. It will retry after your next message.",
-    "empty": "Your cart is empty.\nAsk the assistant to add something you like — try \"add the White Floral Camisole to my cart\"!",
+    "empty": "Your cart is empty.\nAsk the assistant to add something you like — try \"add the Silk-Blend Camisole to my cart\"!",
     "added": "Added {{item}} to cart",
     "removed": "🗑️ Removed {{item}} from cart",
     "total": "Total",
@@ -67,12 +80,112 @@
     "movedToOrders": "Moved to Orders ✓",
     "syncFailed": "Order recorded, but the cart could not update. Try removing it again.",
     "shareList": "Share my list",
-    "shareText": "My Guikela shopping list",
-    "shareSlogan": "No ads · No sponsored results — my AI shopper takes no merchant money."
+    "shareText": "My Guikelai Guizhou goods list",
+    "shareSlogan": "No ads · No sponsored results — my AI shopper takes no merchant money.",
+    "updateFailed": "Could not update the quantity of {{item}}. Please try again.",
+    "removeFailed": "Could not remove {{item}}. Please try again.",
+    "delete": "Delete {{item}}",
+    "toggleSelect": "Toggle selection for {{item}}",
+    "increaseQty": "Increase quantity of {{item}}",
+    "decreaseQty": "Decrease quantity of {{item}}",
+    "selectAll": "Select all",
+    "selectedTotal": "{{count}} selected · CNY ¥{{total}}",
+    "checkout": "Checkout",
+    "checkoutSelected": "Checkout ({{count}} · CNY ¥{{total}})",
+    "checkingOut": "Checking out…",
+    "checkoutSuccess": "Checkout complete: {{count}} item(s) moved to orders ✓",
+    "checkoutFailed": "Checkout failed. Please try again."
+  },
+  "guizhou": {
+    "title": "Guizhou Goods Catalog",
+    "subtitle": "Real product categories · transparent reference prices · verify before purchase",
+    "bannerAlt": "Guizhou mountains and Miao village scenery",
+    "loading": "Loading Guizhou specialties…",
+    "error": "Could not load products. Please try again later.",
+    "added": "Added {{item}} to cart",
+    "storyLabel": "Origin and culture",
+    "shuffle": "Refresh picks",
+    "picksTitle": "Picked for you",
+    "aiTitle": "Inspiration bundles",
+    "aiThemeLabel": "theme: {{theme}}",
+    "aiGenerate": "Inspire me",
+    "aiRegenerate": "New inspiration",
+    "aiGenerating": "Combining…",
+    "aiGeneratingHint": "Combining ideas from verified Guizhou catalog entries…",
+    "aiGenerateFailed": "No matching catalog products are available. Try another category.",
+    "aiBadge": "Catalog pick",
+    "carouselTitle": "Featured picks",
+    "filterTitle": "Categories",
+    "filterAll": "All",
+    "filterEmpty": "No products in this category yet",
+    "tourButton": "AI guide: {{label}}",
+    "groups": {
+      "ethnic-wear": "Ethnic Wear",
+      "craft": "Handicrafts",
+      "food": "Local Food",
+      "drink": "Tea & Spirits"
+    },
+    "tours": {
+      "title": "Culture Tours",
+      "hint": "Pick a theme — the AI guide narrates the heritage behind the crafts and recommends matching products",
+      "overview": {
+        "label": "Guizhou Overview",
+        "query": "Take me on a Guizhou specialties culture tour — tell the stories behind the heritage goods and recommend related products"
+      },
+      "silver": {
+        "label": "Miao Silver",
+        "query": "Take me on a Guizhou Miao silver culture tour — tell the story of Miao silverwork and recommend related products"
+      },
+      "batik": {
+        "label": "Batik Journey",
+        "query": "Take me on a Guizhou batik culture tour — tell the story of Miao batik craft and recommend related products"
+      },
+      "food": {
+        "label": "Taste of Guizhou",
+        "query": "Take me on a Guizhou food culture tour — tell the story behind sour soup and Lao Gan Ma and recommend related products"
+      },
+      "tea": {
+        "label": "Tea & Spirits",
+        "query": "Take me on a Guizhou tea and spirits culture tour — tell the story of Duyun Maojian and Moutai-town baijiu and recommend related products"
+      }
+    }
+  },
+  "productDetail": {
+    "title": "Product details",
+    "storyLabel": "Origin and culture",
+    "buyOnJD": "Buy on JD.com",
+    "buyOnTaobao": "Buy on Taobao",
+    "close": "Close",
+    "specs": "Specifications",
+    "specCategory": "Category",
+    "specSubcategory": "Subcategory",
+    "specPrice": "Price",
+    "specSource": "Source",
+    "categories": {
+      "apparel": "Apparel",
+      "footwear": "Footwear",
+      "accessories": "Accessories",
+      "jewelry": "Jewelry",
+      "guizhou": "Guizhou specialties"
+    },
+    "referencePrice": "Reference price; verify the current merchant price",
+    "imageNotice": "Illustrative image; not a specific merchant SKU",
+    "verification": "Information verification",
+    "verifiedAt": "Catalog reviewed on {{date}}",
+    "buyingTips": "Check before purchase",
+    "buyingTipsList": [
+      "Confirm origin, producer, and product specification",
+      "For food, check ingredients, shelf life, and allergens",
+      "For crafts, confirm materials, dimensions, and production method",
+      "Use the merchant page as the source for live prices and reviews"
+    ]
   },
   "me": {
     "language": "Language",
-    "safety": "Safety checks",
+    "dialect": "Guizhou dialect",
+    "dialectOnHint": "The assistant replies with a playful Guizhou-dialect flavour.",
+    "dialectOffHint": "Off: the assistant replies in standard Chinese.",
+    "safety": "Safety check",
     "safetyOnHint": "AI safety checks are on. A mandatory high-risk blocklist always remains active.",
     "safetyOffHint": "AI safety checks are off. A mandatory high-risk blocklist still blocks unsafe requests.",
     "budget": "Monthly budget",
@@ -81,8 +194,8 @@
     "budgetLabel": "Monthly budget",
     "budgetPlaceholder": "Amount",
     "saveBudget": "Save budget",
-    "budgetInvalid": "Enter a monthly budget greater than $0.",
-    "budgetSaved": "Monthly budget set to ${{budget}} ✓",
+    "budgetInvalid": "Enter a monthly budget greater than CNY 0.",
+    "budgetSaved": "Monthly budget set to CNY ¥{{budget}} ✓",
     "budgetSaveFailed": "Could not save your monthly budget yet.",
     "dataFreshness": "Data freshness",
     "freshnessValue": "{{hours}} hours",
@@ -106,10 +219,10 @@
     "ordersEmptyHint": "Buy through an external product link, then mark it purchased from your Cart or Favorites.",
     "ordersLoading": "Loading orders…",
     "ordersError": "Could not load orders.",
-    "ordersMonthlySummary": "This month: {{count}} purchased · ${{total}}",
-    "ordersBudget": "Budget ${{budget}} — spent ${{total}}",
-    "ordersRemaining": "${{amount}} left",
-    "ordersOverBudget": "${{amount}} over",
+    "ordersMonthlySummary": "This month: {{count}} purchased · CNY ¥{{total}}",
+    "ordersBudget": "Budget CNY ¥{{budget}} — spent ¥{{total}}",
+    "ordersRemaining": "CNY ¥{{amount}} left",
+    "ordersOverBudget": "CNY ¥{{amount}} over",
     "ordersBudgetProgressBar": "Monthly spending versus budget",
     "markPurchased": "Mark as bought",
     "markedPurchased": "Recorded",
@@ -123,7 +236,7 @@
   },
   "auth": {
     "title": "Sign in",
-    "subtitle": "Sign in to your Guikela account",
+    "subtitle": "Sign in to save your Guizhou goods list",
     "usernameLabel": "Username",
     "passwordLabel": "Password",
     "loginButton": "Sign in",

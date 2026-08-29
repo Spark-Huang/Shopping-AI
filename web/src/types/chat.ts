@@ -28,10 +28,18 @@ export interface ChatboxProps {
   requestCommandRef?: React.MutableRefObject<
     ((command: string) => void) | null
   >;
+  /** Ref the shell calls to send a culture-tour query into the chat. */
+  requestTourRef?: React.MutableRefObject<
+    ((query: string) => void) | null
+  >;
+  /** Ref the shell calls to start a fresh conversation (Navbar menu). */
+  requestNewChatRef?: React.MutableRefObject<(() => void) | null>;
   onCartChange?: () => void;
   visible?: boolean;
   safetyEnabled: boolean;
   onSafetyChange: (enabled: boolean) => void;
+  /** Guizhou-dialect reply mode, toggled from the Me page. */
+  dialectEnabled?: boolean;
 }
 
 export interface SafeHTMLProps {
@@ -48,6 +56,8 @@ export interface ChatMessageProps {
   onAddToCart?: (product: ImageContent | string) => void;
   cartAddInFlight?: boolean;
   onToggleFavorite?: (product: ImageContent) => void;
+  /** Forwarded to the product detail modal so cart adds update the badge. */
+  onCartChange?: () => void;
   isFavorite?: boolean;
   isHistory?: boolean;
 }

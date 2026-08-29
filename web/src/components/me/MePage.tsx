@@ -32,6 +32,7 @@ import { getAuthUser } from "../../lib/auth";
 import { parseMonthlyBudget, replaceMonthlyBudget } from "../../lib/budget";
 import { readFavorites } from "../../lib/favorites";
 import type { ImageContent } from "../../types/chat";
+import { formatCny } from "../../lib/currency";
 
 /**
  * Sub-views of the Me tab. Values intentionally mirror the future route
@@ -47,6 +48,9 @@ type MePageProps = {
   onOrderChange?: () => void;
   safetyEnabled: boolean;
   onSafetyChange: (enabled: boolean) => void;
+  /** Guizhou-dialect reply mode, off by default. */
+  dialectEnabled?: boolean;
+  onDialectChange?: (enabled: boolean) => void;
   onLogout?: () => void;
 };
 
@@ -55,6 +59,8 @@ const MePage: React.FC<MePageProps> = ({
   onOrderChange,
   safetyEnabled,
   onSafetyChange,
+  dialectEnabled = false,
+  onDialectChange,
   onLogout,
 }) => {
   const { t, i18n } = useTranslation();
@@ -243,7 +249,7 @@ const MePage: React.FC<MePageProps> = ({
                 <div>
                   <h5>{product.productName}</h5>
                   {product.price != null && (
-                    <span>${product.price.toFixed(2)}</span>
+                    <span>{formatCny(product.price)}</span>
                   )}
                   <div className="favorites-item__actions">
                     <button
@@ -290,8 +296,8 @@ const MePage: React.FC<MePageProps> = ({
     <div className="me-page">
       {/* Brand */}
       <div className="me-page__brand">
-        <span className="me-page__brand-dot" aria-hidden="true" />
-        <h4 className="me-page__brand-name">Guikela</h4>
+        <img className="me-page__brand-logo" src="/images/logo-guikelai.png" alt={t("brand.name")} />
+        <h4 className="me-page__brand-name">{t("brand.name")}</h4>
       </div>
 
       {/* Account row: current user + sign out */}
@@ -345,7 +351,7 @@ const MePage: React.FC<MePageProps> = ({
         <div className="me-page__row">
           <span className="me-page__row-label">{t("me.budget")}</span>
           <span className="me-page__row-value">
-            {budget == null ? t("me.budgetValue") : `$${budget.toFixed(2)}`}
+            {budget == null ? t("me.budgetValue") : formatCny(budget)}
           </span>
         </div>
         <p className="me-page__row-hint">{t("me.budgetHint")}</p>
@@ -444,6 +450,25 @@ const MePage: React.FC<MePageProps> = ({
       </div>
       <p className="me-page__row-hint">
         {t(safetyEnabled ? "me.safetyOnHint" : "me.safetyOffHint")}
+      </p>
+
+      {/* Guizhou dialect row: flavour the assistant's replies with local
+          expressions (off by default; purely stylistic). */}
+      <div className="me-page__row">
+        <span className="me-page__row-label">{t("me.dialect")}</span>
+        <Switch
+          checked={dialectEnabled}
+          onChange={(event) => onDialectChange?.(event.target.checked)}
+          inputProps={
+            {
+              "aria-label": t("me.dialect"),
+              "data-testid": "dialect-switch",
+            } as React.InputHTMLAttributes<HTMLInputElement>
+          }
+        />
+      </div>
+      <p className="me-page__row-hint">
+        {t(dialectEnabled ? "me.dialectOnHint" : "me.dialectOffHint")}
       </p>
 
       {/* Version row */}

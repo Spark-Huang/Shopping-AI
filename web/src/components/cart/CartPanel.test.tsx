@@ -18,35 +18,82 @@ const ok = (body: unknown) => ({
   json: async () => body,
 });
 
-describe("CartPanel purchased cart sync", () => {
-  it("marks the order, removes the cart line, and shows the synced toast", async () => {
+describe("CartPanel multi-select checkout", () => {
+  it("checks out the selected lines in one request and refreshes", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
         ok({
-          cart: [{ item: "Silk Dress", amount: 2, price: 49.99 }],
+          cart: [
+            { item: "Silk Dress", amount: 2, price: 49.99 },
+            { item: "Lao Gan Ma Chili Crisp", amount: 1, price: 9 },
+          ],
         })
       )
-      .mockResolvedValueOnce(ok({}))
-      .mockResolvedValueOnce(ok({}));
+      .mockResolvedValueOnce(ok({ message: "checked out" }))
+      .mockResolvedValueOnce(ok({ cart: [] }));
     vi.stubGlobal("fetch", fetchMock);
 
     render(<CartPanel refreshSignal={0} onOrderChange={vi.fn()} />);
 
+    // Select both lines, then hit the checkout button.
     fireEvent.click(
-      await screen.findByRole("button", { name: /mark as bought/i })
+      await screen.findByRole("button", { name: /toggle selection for silk dress/i })
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /toggle selection for lao gan ma chili crisp/i,
+      })
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /^checkout \(3 · cny ¥108\.98\)$/i })
     );
 
     await waitFor(() =>
-      expect(toastMock.success).toHaveBeenCalledWith("Moved to Orders ✓")
+      expect(toastMock.success).toHaveBeenCalledWith(
+        "Checkout complete: 3 item(s) moved to orders ✓"
+      )
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "/api/orders/1",
-      expect.objectContaining({ method: "POST" })
+      "/api/cart/1/checkout",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          items: [
+            { item: "Silk Dress", price: 49.99 },
+            { item: "Lao Gan Ma Chili Crisp", price: 9 },
+          ],
+        }),
+      })
+    );
+  });
+});
+
+describe("CartPanel item deletion", () => {
+  it("removes the whole line when the delete button is pressed", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        ok({ cart: [{ item: "Silk Dress", amount: 2, price: 49.99 }] })
+      )
+      .mockResolvedValueOnce(ok({}))
+      .mockResolvedValueOnce(ok({ cart: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CartPanel refreshSignal={0} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /delete silk dress/i })
+    );
+
+    await waitFor(() =>
+      expect(toastMock.success).toHaveBeenCalledWith(
+        "🗑️ Removed Silk Dress from cart"
+      )
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
-      3,
+      2,
       "/api/cart/1/remove",
       expect.objectContaining({
         method: "POST",
@@ -56,8 +103,49 @@ describe("CartPanel purchased cart sync", () => {
   });
 });
 
+describe("CartPanel quantity stepper", () => {
+  it("sets the new absolute quantity through the cart add endpoint", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        ok({ cart: [{ item: "Silk Dress", amount: 2, price: 49.99 }] })
+      )
+      .mockResolvedValueOnce(ok({}))
+      .mockResolvedValueOnce(
+        ok({ cart: [{ item: "Silk Dress", amount: 3, price: 49.99 }] })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CartPanel refreshSignal={0} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /increase quantity of silk dress/i })
+    );
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        2,
+        "/api/cart/1",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            item: "Silk Dress",
+            amount: 3,
+            price: 49.99,
+            url: "",
+            idempotent: true,
+          }),
+        })
+      )
+    );
+  });
+});
+
 describe("CartPanel sharing", () => {
   it("copies the cart through the execCommand fallback over HTTP", async () => {
+    // The module-level toast mock keeps its call history across tests in
+    // this file; clear it so the once-assertion below is meaningful.
+    toastMock.success.mockClear();
     const writeText = vi.fn();
     const execCommand = vi.fn(() => true);
     vi.stubGlobal("navigator", Object.assign(navigator, { clipboard: {} }));

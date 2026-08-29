@@ -1,29 +1,42 @@
 {
-  "documentTitle": "贵客来",
+  "documentTitle": "贵客来｜贵州好物智能购物助手",
+  "brand": {
+    "name": "贵客来"
+  },
+  "menu": {
+    "newChat": "新对话",
+    "discover": "逛贵州好物",
+    "cart": "购物车",
+    "me": "个人中心",
+    "language": "切换语言",
+    "about": "关于贵客来",
+    "version": "贵客来 · 赛道三演示版"
+  },
   "footer": {
     "contactUs": "联系我们",
     "guidelines": "指南与常见问题",
     "privacyPolicy": "隐私政策"
   },
   "tabs": {
-    "messages": "消息",
+    "messages": "问好物",
+    "discover": "逛好物",
     "cart": "购物车",
     "me": "我的"
   },
   "chatbox": {
-    "title": "贵客来",
-    "placeholder": "输入你想找的商品…",
+    "title": "贵客来 · 贵州好物顾问",
+    "placeholder": "送谁、预算、口味或想找的贵州好物…",
     "sendLabel": "发送消息",
     "resetLabel": "重置对话",
     "resetConfirmLabel": "确认清空对话？",
     "uploadLabel": "上传图片以搜索相似商品",
-    "introduction": "欢迎 👋 今天想逛点什么？",
+    "introduction": "欢迎来到贵客来 👋 我会根据送礼对象、预算和口味，从贵州风味、黔茶与非遗手作中帮你挑到合适好物。",
     "exampleQuestions": [
-      "你们有中长半身裙吗？",
-      "给我看150美元以下的夏季连衣裙",
-      "帮我找和这张图类似的鞋子（可上传图片）",
-      "把白色花卉吊带背心加入购物车",
-      "有哪些热门配饰？"
+      "预算100元，帮我配一份贵州伴手礼",
+      "不太能吃辣，有什么贵州零食？",
+      "推荐适合送长辈的贵州茶",
+      "讲讲苗绣和蜡染的区别并推荐好物",
+      "给第一次来贵州的朋友挑三件礼物"
     ],
     "addToCart": "加入购物车",
     "addToCartCommand": "把{{name}}加入购物车",
@@ -67,11 +80,111 @@
     "movedToOrders": "已移入订单 ✓",
     "syncFailed": "订单已记录，但购物车更新失败。请稍后再试移除。",
     "shareList": "分享我的清单",
-    "shareText": "我的贵客来购物清单",
-    "shareSlogan": "没有广告 · 没有赞助结果——我的 AI 购物助手不收商家一分钱。"
+    "shareText": "我的贵客来贵州好物清单",
+    "shareSlogan": "没有广告 · 没有赞助结果——我的 AI 购物助手不收商家一分钱。",
+    "updateFailed": "更新 {{item}} 数量失败，请重试。",
+    "removeFailed": "移除 {{item}} 失败，请重试。",
+    "delete": "删除 {{item}}",
+    "toggleSelect": "选择/取消选择 {{item}}",
+    "increaseQty": "增加 {{item}} 数量",
+    "decreaseQty": "减少 {{item}} 数量",
+    "selectAll": "全选",
+    "selectedTotal": "已选 {{count}} 件 · ¥{{total}}",
+    "checkout": "结算",
+    "checkoutSelected": "结算（{{count}} 件 · ¥{{total}}）",
+    "checkingOut": "结算中…",
+    "checkoutSuccess": "结算成功：{{count}} 件商品已移入订单 ✓",
+    "checkoutFailed": "结算失败，请重试。"
+  },
+  "guizhou": {
+    "title": "贵州好物库",
+    "subtitle": "真实品类导购 · 参考价透明 · 跳转平台核验后购买",
+    "bannerAlt": "贵州山水与苗寨风光",
+    "loading": "正在加载贵州特色商品…",
+    "error": "商品加载失败，请稍后重试。",
+    "added": "已将 {{item}} 加入购物车",
+    "storyLabel": "产地与文化",
+    "shuffle": "换一批",
+    "picksTitle": "为你推荐",
+    "aiTitle": "灵感搭配",
+    "aiThemeLabel": "主题：{{theme}}",
+    "aiGenerate": "灵感生成",
+    "aiRegenerate": "换个灵感",
+    "aiGenerating": "正在组合…",
+    "aiGeneratingHint": "正在从已核验的贵州商品目录中组合推荐…",
+    "aiGenerateFailed": "暂时没有匹配的目录商品，请切换分类。",
+    "aiBadge": "目录灵感",
+    "carouselTitle": "精选好物",
+    "filterTitle": "分类",
+    "filterAll": "全部",
+    "filterEmpty": "该分类下暂无商品",
+    "tourButton": "AI讲解：{{label}}",
+    "groups": {
+      "ethnic-wear": "民族服饰",
+      "craft": "传统工艺",
+      "food": "特色食品",
+      "drink": "茶与酒"
+    },
+    "tours": {
+      "title": "文化之旅",
+      "hint": "选择一个主题，AI 导览员会为你讲解非遗背后的故事并推荐相关好物",
+      "overview": {
+        "label": "黔货总览",
+        "query": "带我来一场贵州特色文化之旅，讲讲贵州非遗好物背后的故事，并推荐相关商品"
+      },
+      "silver": {
+        "label": "苗银之光",
+        "query": "带我来一场贵州苗银文化之旅，讲讲苗族银饰锻造技艺的故事，并推荐相关商品"
+      },
+      "batik": {
+        "label": "蜡染之旅",
+        "query": "带我来一场贵州蜡染文化之旅，讲讲苗族蜡染技艺的故事，并推荐相关商品"
+      },
+      "food": {
+        "label": "舌尖贵州",
+        "query": "带我来一场贵州美食文化之旅，讲讲酸汤和老干妈背后的故事，并推荐相关商品"
+      },
+      "tea": {
+        "label": "茶酒飘香",
+        "query": "带我来一场贵州茶酒文化之旅，讲讲都匀毛尖和茅台镇酱香酒的故事，并推荐相关商品"
+      }
+    }
+  },
+  "productDetail": {
+    "title": "商品详情",
+    "storyLabel": "产地与文化",
+    "buyOnJD": "前往京东购买",
+    "buyOnTaobao": "前往淘宝购买",
+    "close": "关闭",
+    "specs": "规格参数",
+    "specCategory": "分类",
+    "specSubcategory": "子类",
+    "specPrice": "价格",
+    "specSource": "商品来源",
+    "categories": {
+      "apparel": "服饰",
+      "footwear": "鞋履",
+      "accessories": "配饰",
+      "jewelry": "珠宝",
+      "guizhou": "贵州特色"
+    },
+    "referencePrice": "参考价，实际售价以商家页为准",
+    "imageNotice": "商品示意图，不代表具体商家 SKU",
+    "verification": "信息核验",
+    "verifiedAt": "目录整理于 {{date}}",
+    "buyingTips": "购买前核对",
+    "buyingTipsList": [
+      "核对产地、生产者与商品规格",
+      "食品请查看配料、保质期与过敏原",
+      "非遗手作请确认材质、尺寸与制作方式",
+      "价格和评价请以跳转后的商家页面为准"
+    ]
   },
   "me": {
     "language": "语言",
+    "dialect": "黔味方言",
+    "dialectOnHint": "AI 导览会用贵州方言风味回复，要得！",
+    "dialectOffHint": "关闭后 AI 使用标准中文回复。",
     "safety": "安全检查",
     "safetyOnHint": "AI 安全检查已开启；强制高危词底线始终生效。",
     "safetyOffHint": "AI 安全检查已关闭；强制高危词底线仍会拦截危险请求。",
@@ -81,8 +194,8 @@
     "budgetLabel": "月预算",
     "budgetPlaceholder": "金额",
     "saveBudget": "保存预算",
-    "budgetInvalid": "请输入大于 $0 的月预算。",
-    "budgetSaved": "月预算已设为 ${{budget}} ✓",
+    "budgetInvalid": "请输入大于 0 元的月预算。",
+    "budgetSaved": "月预算已设为 ¥{{budget}} ✓",
     "budgetSaveFailed": "暂时无法保存你的月预算。",
     "dataFreshness": "数据新鲜度",
     "freshnessValue": "{{hours}} 小时",
@@ -106,10 +219,10 @@
     "ordersEmptyHint": "先通过商品外链购买，再从购物车或收藏标记为已买。",
     "ordersLoading": "正在加载订单…",
     "ordersError": "订单加载失败。",
-    "ordersMonthlySummary": "本月已买 {{count}} 件 · 共 ${{total}}",
-    "ordersBudget": "预算 ${{budget}} —— 已花 ${{total}}",
-    "ordersRemaining": "剩余 ${{amount}}",
-    "ordersOverBudget": "超出 ${{amount}}",
+    "ordersMonthlySummary": "本月已买 {{count}} 件 · 共 ¥{{total}}",
+    "ordersBudget": "预算 ¥{{budget}} —— 已花 ¥{{total}}",
+    "ordersRemaining": "剩余 ¥{{amount}}",
+    "ordersOverBudget": "超出 ¥{{amount}}",
     "ordersBudgetProgressBar": "本月支出与预算对比",
     "markPurchased": "标记为已买",
     "markedPurchased": "已记录",
@@ -123,7 +236,7 @@
   },
   "auth": {
     "title": "登录",
-    "subtitle": "登录你的贵客来账号",
+    "subtitle": "登录贵客来，保存你的贵州好物清单",
     "usernameLabel": "用户名",
     "passwordLabel": "密码",
     "loginButton": "登录",

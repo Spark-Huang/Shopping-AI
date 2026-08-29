@@ -75,7 +75,7 @@ describe("Me page safety toggle", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save budget" }));
 
-    await waitFor(() => expect(screen.getByText("$75.00")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("¥75.00")).toBeTruthy());
     const posts = fetchMock.mock.calls.filter(
       ([, init]) => (init as RequestInit | undefined)?.method === "POST"
     );
