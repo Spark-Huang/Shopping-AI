@@ -2,32 +2,46 @@
  * Chat message component for displaying different types of messages
  */
 
-import React from "react";
+import React, { useState } from "react";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
 import ShareIcon from "@mui/icons-material/Share";
 import { useTranslation } from "react-i18next";
 import SafeHTML from "./SafeHtml";
 import Loader from "./Loader";
+import ProductDetailModal from "../product/ProductDetailModal";
+import { fetchProducts } from "../../api/productsApi";
 import { ChatMessageProps, ImageContent, ImageRowContent } from "../../types/chat";
+import { CatalogProduct } from "../../types/product";
 import { isSaysNo } from "../../lib/share";
+import { formatPrice } from "../../lib/currency";
 import {
   createMarkdownConverter,
   preprocessAssistantContent,
 } from "./messageParsing";
 import { shareMessage } from "./messageActions";
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  CNY: "¥",
-  USD: "$",
-  EUR: "€",
-  GBP: "£",
-  JPY: "¥",
+/** Maps a chat product card onto the shared detail-modal shape. */
+const toDetailProduct = (image: ImageContent): CatalogProduct => ({
+  category: "guizhou",
+  subcategory: "",
+  name: image.productName,
+  description: "",
+  url: image.externalUrl || "",
+  price: image.price ?? 0,
+  image: image.productUrl,
+  verifiedAt: "2026-08-29",
+  imageType: "illustration",
+});
+
+let catalogPromise: Promise<CatalogProduct[]> | null = null;
+const loadCatalog = () => {
+  catalogPromise ??= fetchProducts("guizhou").catch((error) => {
+    catalogPromise = null;
+    throw error;
+  });
+  return catalogPromise;
 };
-
-const currencySymbol = (currency: string): string =>
-  CURRENCY_SYMBOLS[currency.toUpperCase()] ?? "";
-
 const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
   (
     {
@@ -39,6 +53,7 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
       onExampleClick,
       onAddToCart,
       onToggleFavorite,
+      onCartChange,
       isFavorite,
       isHistory,
       cartAddInFlight,
@@ -46,6 +61,23 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
     ref
   ) => {
     const { t } = useTranslation();
+    // Product opened through the card tile; rendered in the detail modal.
+    const [detailProduct, setDetailProduct] = useState<CatalogProduct | null>(
+      null
+    );
+    const openDetail = async (image: ImageContent) => {
+      const fallback = toDetailProduct(image);
+      setDetailProduct(fallback);
+      try {
+        const catalog = await loadCatalog();
+        const grounded = catalog.find(
+          (product) => product.name === image.productName
+        );
+        if (grounded) setDetailProduct(grounded);
+      } catch (error) {
+        console.warn("MessageItem: catalog detail enrichment unavailable", error);
+      }
+    };
 
     const isSaysNoMessage =
       role === "assistant" && typeof content === "string" && isSaysNo(content);
@@ -79,9 +111,12 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
               marginTop: 10,
             }}
           >
-            <span className="assistant-avatar" aria-hidden="true">
-              <span className="assistant-avatar__face" />
-            </span>
+            <img
+              className="messages__avatar"
+              src="/images/logo-guikelai.png"
+              alt=""
+              aria-hidden="true"
+            />
             <div className={`messages__item messages__item--${role}`}>
               <Loader />
             </div>
@@ -107,14 +142,21 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
             marginTop: 10,
           }}
         >
-          <span
-            className={`assistant-avatar${
-              isSaysNoMessage ? " assistant-avatar--guard" : ""
-            }`}
-            aria-hidden="true"
-          >
-            <span className="assistant-avatar__face" />
-          </span>
+          {isSaysNoMessage ? (
+            <span
+              className="messages__avatar messages__avatar--says-no"
+              aria-hidden="true"
+            >
+              !
+            </span>
+          ) : (
+            <img
+              className="messages__avatar"
+              src="/images/logo-guikelai.png"
+              alt=""
+              aria-hidden="true"
+            />
+          )}
           <div
             className={`messages__item messages__item--${role}${
               isSaysNoMessage ? " messages__item--says-no" : ""
@@ -208,12 +250,12 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
               className={`messages__item messages__item--image`}
               ref={ref}
             >
-              {/* Tile image links out to the original product (D4). */}
-              <a
-                href={image.externalUrl || image.productUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              {/* Tile opens the product detail modal; the external link
+                  lives inside the modal alongside the buy actions. */}
+              <button
+                type="button"
                 className="messages__item--image-link"
+                onClick={() => openDetail(image)}
                 aria-label={t("chatbox.viewProduct", {
                   name: image.productName,
                 })}
@@ -223,7 +265,7 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
                   src={image.productUrl}
                   alt={image.productName}
                 />
-              </a>
+              </button>
               <div className="messages__item--image-box">
                 <div className="messages__item--image-name">
                   {image.productName}
@@ -232,7 +274,7 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
                   <div className="messages__item--image-meta">
                     {image.price != null && (
                       <span className="messages__item--image-price">
-                        {image.currency ? currencySymbol(image.currency) : ""}{image.price.toFixed(2)}
+                        {formatPrice(image.price, image.currency)}
                       </span>
                     )}
                     {image.rating != null && (
@@ -283,7 +325,7 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
                             name: image.productName,
                             price:
                               image.price != null
-                                ? `${image.currency ? currencySymbol(image.currency) : ""}${image.price.toFixed(2)}`
+                                ? formatPrice(image.price, image.currency)
                                 : "—",
                             rating:
                               image.rating != null
@@ -305,6 +347,13 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
               </div>
             </div>
           ))}
+          {detailProduct && (
+            <ProductDetailModal
+              product={detailProduct}
+              onClose={() => setDetailProduct(null)}
+              onCartChange={onCartChange}
+            />
+          )}
         </div>
       );
     }

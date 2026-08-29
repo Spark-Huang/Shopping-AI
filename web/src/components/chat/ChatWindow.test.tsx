@@ -1,5 +1,5 @@
 import React from "react";
-import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Chatbox from "./ChatWindow";
 import * as historyApi from "../../api/historyApi";
@@ -27,6 +27,10 @@ const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 Element.prototype.scrollIntoView = vi.fn();
 
+afterEach(() => {
+  cleanup();
+});
+
 const renderChatbox = () =>
   render(
     <Chatbox
@@ -50,7 +54,9 @@ const finishWelcomeTypewriter = async () => {
   for (let elapsed = 0; elapsed < 4000; elapsed += 100) {
     await vi.advanceTimersByTimeAsync(100);
     if (
-      screen.queryAllByTestId("example-chip").length === 5
+      screen.queryByText(
+        "Welcome to Guikelai 👋 Tell me who it is for, your budget, and preferred tastes. I will help you choose Guizhou foods, teas, and heritage crafts."
+      )
     )
       return;
   }
@@ -119,7 +125,7 @@ describe("Chatbox user identity replay behavior", () => {
         await finishWelcomeTypewriter();
         expect(
           screen.getByText(
-            "Welcome 👋 What would you like to shop for today?"
+            "Welcome to Guikelai 👋 Tell me who it is for, your budget, and preferred tastes. I will help you choose Guizhou foods, teas, and heritage crafts."
           )
         ).toBeTruthy();
         expect(screen.getAllByTestId("example-chip")).toHaveLength(5);
@@ -276,7 +282,7 @@ describe("Chatbox session history", () => {
     fireEvent.click(await screen.findByText("买玩具"));
     expect(await screen.findByText("找到积木")).toBeTruthy();
 
-    const input = await screen.findByPlaceholderText("Type something here...");
+    const input = await screen.findByPlaceholderText("Recipient, budget, taste, or Guizhou product…");
     fireEvent.change(input, { target: { value: "another toy" } });
     fireEvent.keyUp(input, { key: "Enter" });
     await waitFor(() =>

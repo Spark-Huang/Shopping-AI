@@ -1,16 +1,17 @@
 
 """
-Main FastAPI application for the Shopping AI API.
+Main FastAPI application for the Guikelai shopping agent API.
 
 This module provides the main API endpoints for the shopping assistant,
 including query processing and streaming responses.
 """
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field as PydanticField
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from pathlib import Path
+import csv
 import logging
 import os
 import sys
@@ -45,6 +46,25 @@ TIMING_LOG = Path(
 )
 
 
+def _products_csv_path() -> Path:
+    """Locate the shared catalog CSV.
+
+    Resolution order: PRODUCTS_CSV env override, then next to SHARED_CONFIG_ROOT
+    (container: /app/platform/configs -> /app/platform/data), then the repo
+    checkout fallback for bare-metal runs.
+    """
+    configured = os.getenv("PRODUCTS_CSV")
+    if configured:
+        return Path(configured)
+    shared_root = os.getenv("SHARED_CONFIG_ROOT")
+    if shared_root:
+        return Path(shared_root).parent / "data" / "products.csv"
+    return Path(__file__).resolve().parents[2] / "platform" / "data" / "products.csv"
+
+
+PRODUCTS_CSV = _products_csv_path()
+
+
 def initialize_agents(config) -> Dict:
     """Initialize all agent instances."""
     return {
@@ -70,8 +90,8 @@ except Exception as e:
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Guikela API",
-    description="AI-powered shopping assistant with multi-service architecture",
+    title="Guikelai API",
+    description="Guizhou specialty shopping agent with grounded catalog retrieval",
     version="1.0.0"
 )
 
@@ -97,6 +117,7 @@ class QueryRequest(BaseModel):
     safety_enabled: Optional[bool] = PydanticField(default=True, alias="safety")
     image_bool: bool = False
     language: Optional[str] = ""
+    dialect: bool = False
     session_id: Optional[int] = None
 
 
@@ -145,6 +166,7 @@ def create_initial_state(
         cart=request.cart or Cart(),
         safety_enabled=request.safety_enabled,
         language=request.language or "",
+        dialect=request.dialect,
     )
 
 def _proxy_auth(
@@ -491,6 +513,79 @@ def remove_cart_item(user_id: int, request: Dict, authorization: Optional[str] =
         raise HTTPException(status_code=502, detail="Failed to remove cart item")
 
 
+@app.post("/cart/{user_id}/checkout")
+def checkout_cart(user_id: int, request: Dict, authorization: Optional[str] = Header(default=None)):
+    """Multi-select checkout: record orders for the chosen lines and clear them from the cart."""
+    require_user(user_id, authorization)
+    try:
+        response = requests.post(
+            f"{config.memory_base_url}/user/{user_id}/checkout",
+            json=request,
+            timeout=15,
+        )
+        if response.status_code == 404:
+            detail = response.json().get("detail", "Item not in cart")
+            raise HTTPException(status_code=404, detail=detail)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"orchestrator | POST /cart/{user_id}/checkout | memory service call failed: {e}")
+        raise HTTPException(status_code=502, detail="Failed to checkout cart items")
+
+
+@app.get("/products")
+def list_products(category: Optional[str] = Query(default=None)):
+    """Serve catalog products straight from the shared CSV, optionally filtered by category.
+
+    Guikelai is Guizhou-only. The optional category parameter remains for API
+    compatibility, but non-Guizhou records are never exposed.
+    """
+    if not PRODUCTS_CSV.exists():
+        logger.warning(
+            f"orchestrator | /products | catalog CSV not found at {PRODUCTS_CSV}; "
+            "returning empty catalog until crawler data lands"
+        )
+        return {"products": []}
+
+    products = []
+    try:
+        with open(PRODUCTS_CSV, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                if (row.get("category") or "").strip().lower() != "guizhou":
+                    continue
+                if category and (row.get("category") or "").strip().lower() != category.strip().lower():
+                    continue
+                try:
+                    price = float(row.get("price") or 0)
+                except ValueError:
+                    price = 0.0
+                products.append({
+                    "category": (row.get("category") or "").strip(),
+                    "subcategory": (row.get("subcategory") or "").strip(),
+                    "name": (row.get("name") or "").strip(),
+                    "description": (row.get("description") or "").strip(),
+                    "url": (row.get("url") or "").strip(),
+                    "price": price,
+                    "image": (row.get("image") or "").strip(),
+                    "story": (row.get("story") or "").strip(),
+                    "sourceName": "贵州省文旅与市场监管公开资料",
+                    "sourceUrl": (
+                        "https://www.mct.gov.cn/whzx/qgwhxxlb/gz/201811/"
+                        "t20181129_836276.htm"
+                        if (row.get("subcategory") or "").strip()
+                        in {"ethnic-wear", "craft"}
+                        else "https://nynct.guizhou.gov.cn/zwgk/xxgkml/snwwj/"
+                        "qnbf/201801/t20180117_25102640.html"
+                    ),
+                    "verifiedAt": "2026-08-29",
+                    "imageType": "illustration",
+                })
+    except OSError as e:
+        logger.error(f"orchestrator | /products | failed reading {PRODUCTS_CSV}: {e}")
+        raise HTTPException(status_code=500, detail="Product catalog unavailable")
+    return {"products": products}
+
+
 @app.get("/orders/{user_id}")
 def get_orders(user_id: int, authorization: Optional[str] = Header(default=None)):
     """Read-only proxy to the memory service's manual-orders endpoint."""
@@ -577,7 +672,7 @@ async def health_check():
 async def root():
     """Root endpoint with API information."""
     return {
-        "message": "Guikela API",
+        "message": "Guikelai API",
         "version": "1.0.0",
         "endpoints": {
             "auth": "/auth/{register,login,me}",

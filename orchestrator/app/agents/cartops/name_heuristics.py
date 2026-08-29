@@ -12,7 +12,7 @@ _PRICE_PATTERN = re.compile(r"PRICE:\s*([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE)
 # Matches **Product Name** spans emitted by the chatter in its user-facing
 # responses. We post-filter the captures against
 # ``_looks_like_product_name`` to reject bolded price/heading spans like
-# "**Price: $69.99**".
+# "**Price: ¥69.99**".
 _BOLD_NAME_RE = re.compile(r"\*\*([^*\n]+?)\*\*")
 
 # Matches the search service's "NAME | description | category" row format.
@@ -141,7 +141,7 @@ def _extract_ordinal_position(query: str) -> Optional[int]:
 class NameHeuristicsMixin:
     @staticmethod
     def _looks_like_product_name(candidate: str) -> bool:
-            """Reject non-name bold spans (``**Price: $69.99**``, ``**Tip:**``).
+            """Reject non-name bold spans (``**Price: ¥69.99**``, ``**Tip:**``).
 
             Product names are at least two tokens of letters/digits, with no
             punctuation beyond hyphens or apostrophes. Additionally, spans

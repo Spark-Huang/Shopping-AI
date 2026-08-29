@@ -159,7 +159,7 @@ class TestContentSafety:
         assert result["response"][0]["content"] == "hello"
 
         calls = engine_module._test_created["calls"]
-        assert calls[-1]["options"] == {"safety": ["input"]}
+        assert calls[-1]["options"] == {"rails": ["input"]}
         assert calls[-1]["messages"] == [
             {"role": "user", "content": "hello"}
         ]
@@ -171,7 +171,7 @@ class TestContentSafety:
         await safety_engine.call_output_safety("safe bot response")
 
         calls = engine_module._test_created["calls"]
-        assert calls[-1]["options"] == {"safety": ["output"]}
+        assert calls[-1]["options"] == {"rails": ["output"]}
         assert calls[-1]["messages"] == [
             {"role": "user", "content": ""},
             {"role": "assistant", "content": "safe bot response"},

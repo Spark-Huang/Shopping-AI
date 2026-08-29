@@ -217,7 +217,7 @@ class TestExtractRetrievalInputs:
 
         prompt = captured["messages"][0]["content"]
         assert "Do NOT use generic browse words" in prompt
-        assert "show me anything under $100" in prompt
+        assert "show me anything under ¥100" in prompt
         assert entities == []
         assert filters == {"max_price": 100.0}
 
@@ -368,6 +368,46 @@ def _install_session_post(
 
 
 class TestRetrieverInvoke:
+    async def test_gift_set_query_spans_guizhou_catalog_categories(
+        self,
+        retriever_agent: RetrieverAgent,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _stub_extraction_response(
+            retriever_agent,
+            {
+                "search_entities": ["伴手礼"],
+                "category_one": "food",
+                "category_two": "food",
+                "category_three": "food",
+                "max_price": 100,
+            },
+        )
+        captured = _install_session_post(
+            monkeypatch,
+            retriever_agent,
+            payload={"texts": [], "names": [], "images": []},
+        )
+
+        await retriever_agent.invoke(
+            State(user_id=1, query="预算100元推荐三样贵州伴手礼"),
+            verbose=False,
+        )
+
+        assert captured["json"]["text"] == [
+            "贵州茶",
+            "贵州不辣食品饮品",
+            "贵州非遗手作伴手礼",
+        ]
+        assert captured["json"]["categories"] == [
+            "ethnic-wear",
+            "craft",
+            "food",
+            "drink",
+        ]
+        assert captured["json"]["filters"] == {"max_price": 100.0}
+        assert captured["json"]["k"] == 6
+
     @pytest.mark.parametrize(
         ("query", "arguments", "expected"),
         [
@@ -420,7 +460,7 @@ class TestRetrieverInvoke:
         state = State(user_id=1, query="recommend a laptop")
         out = await retriever_agent.invoke(state, verbose=False)
 
-        assert "not in our catalog" in out.response
+        assert "Guizhou specialties only" in out.response
         assert "captured" not in locals() or captured == {}
 
     async def test_text_query_populates_state_with_results(

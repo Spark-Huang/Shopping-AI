@@ -13,9 +13,9 @@ models:
 
 bot_messages:
   refuse to respond: 
-    - "Sorry, I am a shopping assistant and can only help you with your shopping needs."
+    - "抱歉，贵客来专注于贵州特色商品选购。我可以继续帮你挑选贵州食品、茶饮、非遗手作和伴手礼。"
 
-safety:
+rails:
   input:
     flows:
       - content safety check input $model=content_safety

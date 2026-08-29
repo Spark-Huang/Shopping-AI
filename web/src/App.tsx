@@ -12,20 +12,28 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useTranslation } from "react-i18next";
 
 import Navbar from "./components/Navbar";
 import AuthPage from "./components/auth/AuthPage";
 import Chatbox from "./components/chat/ChatWindow";
 import CartPanel from "./components/cart/CartPanel";
+import GuizhouPage from "./components/guizhou/GuizhouPage";
 import MePage from "./components/me/MePage";
 import BottomTabBar, { type TabId } from "./components/BottomTabBar";
 import Footer from "./components/Footer";
 import { AuthUser, clearAuth, getAuthUser } from "./lib/auth";
+import { setAppLanguage, type AppLang } from "./i18n";
 import {
   SAFETY_STORAGE_KEY,
   readSafetyState,
   writeSafetyState,
 } from "./safetyToggle";
+import {
+  DIALECT_STORAGE_KEY,
+  readDialectState,
+  writeDialectState,
+} from "./dialectToggle";
 
 const App: React.FC = () => {
   const [user, setUser] = useState<AuthUser | null>(getAuthUser);
@@ -45,6 +53,22 @@ const App: React.FC = () => {
     setSafetyEnabled(enabled);
     writeSafetyState(enabled);
   }, []);
+  // Guizhou-dialect reply mode: off by default, persisted like safety.
+  const [dialectEnabled, setDialectEnabled] =
+    useState(readDialectState);
+  useEffect(() => {
+    const syncState = (event: StorageEvent) => {
+      if (event.key === DIALECT_STORAGE_KEY) {
+        setDialectEnabled(event.newValue === "true");
+      }
+    };
+    window.addEventListener("storage", syncState);
+    return () => window.removeEventListener("storage", syncState);
+  }, []);
+  const changeDialect = useCallback((enabled: boolean) => {
+    setDialectEnabled(enabled);
+    writeDialectState(enabled);
+  }, []);
   // Bumped whenever a cart add/remove is detected in an assistant reply;
   // CartPanel refetches the cart when this changes.
   const [cartRefreshSignal, setCartRefreshSignal] = useState<number>(0);
@@ -62,6 +86,26 @@ const App: React.FC = () => {
     setActiveTab("messages");
     addFavoriteToCartRef.current?.(productName);
   }, []);
+  // Product-discovery handoff: the catalog can send a grounded shopping
+  // prompt to the agent and jump back to the conversation.
+  const tourQueryRef = useRef<((query: string) => void) | null>(null);
+  const handleTourStart = useCallback((query: string) => {
+    setActiveTab("messages");
+    tourQueryRef.current?.(query);
+  }, []);
+  // New-chat handoff: the Navbar "more choices" menu asks the chatbox for
+  // an explicit fresh start (drops the persistent user id + welcome flow).
+  const requestNewChatRef = useRef<(() => void) | null>(null);
+  const handleNewChat = useCallback(() => {
+    setActiveTab("messages");
+    requestNewChatRef.current?.();
+  }, []);
+  // Language toggle for the Navbar menu (same behaviour as the Me tab).
+  const { i18n } = useTranslation();
+  const handleToggleLanguage = useCallback(() => {
+    const next: AppLang = i18n.language?.startsWith("zh") ? "en" : "zh";
+    setAppLanguage(next);
+  }, [i18n.language]);
   const handleLogout = useCallback(() => {
     clearAuth();
     setUser(null);
@@ -75,7 +119,11 @@ const App: React.FC = () => {
   return (
     <div className="app-shell">
       <div className="phone-container">
-        <Navbar />
+        <Navbar
+          onNavigate={setActiveTab}
+          onNewChat={handleNewChat}
+          onToggleLanguage={handleToggleLanguage}
+        />
         <main className="tab-panels">
           {/* Panels stay mounted forever; only display toggles. */}
           <section
@@ -85,10 +133,23 @@ const App: React.FC = () => {
           >
             <Chatbox
               requestCommandRef={addFavoriteToCartRef}
+              requestTourRef={tourQueryRef}
+              requestNewChatRef={requestNewChatRef}
               onCartChange={handleCartChange}
               visible={activeTab === "messages"}
               safetyEnabled={safetyEnabled}
               onSafetyChange={changeSafety}
+              dialectEnabled={dialectEnabled}
+            />
+          </section>
+          <section
+            className="tab-panel"
+            hidden={activeTab !== "discover"}
+            data-testid="panel-discover"
+          >
+            <GuizhouPage
+              onCartChange={handleCartChange}
+              onTourStart={handleTourStart}
             />
           </section>
           <section
@@ -114,6 +175,8 @@ const App: React.FC = () => {
               onOrderChange={handleOrderChange}
               safetyEnabled={safetyEnabled}
               onSafetyChange={changeSafety}
+              dialectEnabled={dialectEnabled}
+              onDialectChange={changeDialect}
               onLogout={handleLogout}
             />
           </section>

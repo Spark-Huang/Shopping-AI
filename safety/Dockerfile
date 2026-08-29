@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy app code
 COPY safety/app ./app
 COPY ./platform/configs/safety ./platform/configs/safety
+COPY ./platform/configs/safety-overrides ./platform/configs/safety-overrides
 
 ENV PYTHONPATH=/app:/app/platform/configs/safety
 

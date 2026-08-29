@@ -28,6 +28,7 @@ def _make_config(model_entries: List[Dict[str, Any]]) -> SimpleNamespace:
     models = [
         SimpleNamespace(
             type=entry["type"],
+            model=entry.get("model", "original-model"),
             parameters=dict(entry.get("parameters", {})),
         )
         for entry in model_entries
@@ -36,6 +37,28 @@ def _make_config(model_entries: List[Dict[str, Any]]) -> SimpleNamespace:
 
 
 class TestApplyEndpointOverrides:
+    def test_safety_model_name_comes_from_environment(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        monkeypatch.delenv("CONFIG_OVERRIDE", raising=False)
+        monkeypatch.setenv("SAFETY_NAME", "gpt-5.5")
+        config = SimpleNamespace(
+            models=[
+                SimpleNamespace(
+                    type="main",
+                    engine="openai",
+                    model="legacy-model",
+                    parameters={},
+                )
+            ]
+        )
+
+        apply_endpoint_overrides(config, config_dir=str(tmp_path))
+
+        assert config.models[0].model == "gpt-5.5"
+
     def test_no_override_env_leaves_config_untouched(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -340,3 +363,22 @@ class TestNeutralDefaultBaseURL:
 
         assert model.parameters["base_url"] == "http://real-safety-gateway.example.com/v1"
         assert model.parameters["api_key"] == "test-key"
+
+
+class TestSafetyYamlShape:
+    """Guard against using configuration keys ignored by NeMo Guardrails."""
+
+    def test_safety_config_declares_native_rails(self) -> None:
+        config_path = (
+            Path(__file__).resolve().parents[3]
+            / "platform"
+            / "configs"
+            / "safety"
+            / "config.yml"
+        )
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+
+        assert "rails" in config
+        assert "safety" not in config
+        assert config["rails"]["input"]["flows"]
+        assert config["rails"]["output"]["flows"]

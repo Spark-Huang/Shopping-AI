@@ -6,6 +6,7 @@ COPY search/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY search ./search
+COPY crawler ./crawler
 COPY ./platform/configs/search ./platform/configs/search
 COPY ./platform/data ./platform/data
 

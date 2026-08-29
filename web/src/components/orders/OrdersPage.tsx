@@ -7,6 +7,7 @@ import { fetchHistory } from "../../api/historyApi";
 import { getOrCreateUserId } from "../../lib/identity";
 import { parseMonthlyBudget } from "../../lib/budget";
 import type { OrderData } from "../../types/orders";
+import { formatCny } from "../../lib/currency";
 
 type LoadState = "loading" | "ready" | "error";
 
@@ -140,7 +141,7 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
             {orders.map((order) => (
               <article className="orders-item" key={order.id}>
                 <span className="orders-item__name">{order.item}</span>
-                {order.price != null && <span>${order.price.toFixed(2)}</span>}
+                {order.price != null && <span>{formatCny(order.price)}</span>}
                 {order.purchased_at && (
                   <time dateTime={order.purchased_at}>
                     {order.purchased_at.slice(0, 10)}

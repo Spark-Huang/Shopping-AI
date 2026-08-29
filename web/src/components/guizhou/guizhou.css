@@ -1,0 +1,481 @@
+/* ===== App-wide Guizhou goods discovery experience ===== */
+
+.guizhou-page {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: 8px;
+  border-radius: calc(var(--radius) * 1.5);
+  background: var(--surface-2);
+  border: 1px solid var(--glass-border);
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.guizhou-page__header {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--glass-border);
+  background: linear-gradient(
+    135deg,
+    rgba(29, 78, 216, 0.08),
+    rgba(180, 83, 9, 0.06)
+  );
+}
+
+.guizhou-page__banner {
+  position: relative;
+  aspect-ratio: 21 / 7;
+  overflow: hidden;
+}
+
+.guizhou-page__banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.guizhou-page__header .guizhou-page__title,
+.guizhou-page__header .guizhou-page__subtitle {
+  padding: 0 16px;
+}
+
+.guizhou-page__header .guizhou-page__subtitle {
+  padding-bottom: 12px;
+}
+
+.guizhou-page__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--brand-deep);
+}
+
+.guizhou-page__subtitle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.guizhou-page__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 12px 16px;
+}
+
+.guizhou-page__group {
+  margin-top: 12px;
+}
+
+.guizhou-page__group-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-deep);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.guizhou-page__grid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.guizhou-page__grid-header .guizhou-page__group-title {
+  margin: 0;
+}
+
+.guizhou-page__shuffle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--surface-1);
+  color: var(--brand-deep);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.guizhou-page__shuffle:hover {
+  background: var(--surface-2, rgba(0, 0, 0, 0.05));
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(10, 38, 71, 0.12);
+}
+
+.guizhou-page__shuffle:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+.guizhou-page__ai-header .guizhou-page__group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.guizhou-page__ai-theme {
+  font-weight: 400;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.guizhou-page__ai-generate {
+  background: linear-gradient(135deg, #6d5efc, #9f6dfc);
+  color: #fff;
+  border: none;
+}
+
+.guizhou-page__ai-generate:hover {
+  background: linear-gradient(135deg, #5d4efc, #8f5dfc);
+}
+
+.guizhou-page__ai-generate:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+
+.guizhou-page__ai-generate--pulse svg {
+  animation: inspiration-pop 0.46s ease-out both;
+}
+
+@keyframes inspiration-pop {
+  0% { transform: scale(0.72) rotate(-10deg); }
+  55% { transform: scale(1.24) rotate(8deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guizhou-page__ai-generate--pulse svg {
+    animation: none;
+  }
+}
+
+.guizhou-card--ai {
+  outline: 1px dashed rgba(109, 94, 252, 0.45);
+  outline-offset: -4px;
+}
+
+.guizhou-card--ai .guizhou-card__media {
+  position: relative;
+}
+
+.guizhou-card__ai-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6d5efc, #9f6dfc);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.guizhou-page__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.guizhou-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.guizhou-card--clickable {
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease-spring),
+    box-shadow 0.2s var(--ease-spring);
+}
+
+.guizhou-card--clickable:hover {
+  border-color: var(--brand-primary, #1d4ed8);
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.12);
+}
+
+.guizhou-card__media {
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #f4f6f8;
+}
+
+.guizhou-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.guizhou-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  flex: 1 1 auto;
+}
+
+.guizhou-card__name-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.guizhou-card__name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.guizhou-card__description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.guizhou-card__footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.guizhou-card__price {
+  font-size: 14px;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.guizhou-card__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--brand-primary, #1d4ed8);
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: transparent;
+  color: var(--brand-primary, #1d4ed8);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.guizhou-card__add:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.guizhou-card__story {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.guizhou-card__story summary {
+  cursor: pointer;
+  color: #b45309;
+  font-weight: 700;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.guizhou-card__story summary::-webkit-details-marker {
+  display: none;
+}
+
+.guizhou-card__story summary::before {
+  content: "▸ ";
+}
+
+.guizhou-card__story[open] summary::before {
+  content: "▾ ";
+}
+
+.guizhou-card__story p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+
+/* ===== Horizontal auto-scrolling product carousel ===== */
+
+.guizhou-carousel {
+  margin-top: 12px;
+}
+
+.guizhou-carousel__track {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 2px 8px;
+  scrollbar-width: thin;
+}
+
+.guizhou-carousel__card {
+  flex: 0 0 auto;
+  width: 132px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: var(--surface-1);
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.guizhou-carousel__card:hover {
+  border-color: var(--brand-primary, #1d4ed8);
+}
+
+.guizhou-carousel__media {
+  display: block;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #f4f6f8;
+}
+
+.guizhou-carousel__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.guizhou-carousel__name {
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.guizhou-carousel__price {
+  padding: 0 8px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #b45309;
+}
+
+/* ===== Category filter chips with AI tour buttons ===== */
+
+.guizhou-page__filters {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--brand-primary, #1d4ed8);
+  border-radius: 12px;
+  background: rgba(29, 78, 216, 0.04);
+}
+
+.guizhou-page__filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.guizhou-filter-chip {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--brand-primary, #1d4ed8);
+  border-radius: 999px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.guizhou-filter-chip--active {
+  background: var(--brand-primary, #1d4ed8);
+}
+
+.guizhou-filter-chip__label {
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--brand-primary, #1d4ed8);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.guizhou-filter-chip--active .guizhou-filter-chip__label {
+  color: #ffffff;
+}
+
+.guizhou-filter-chip__tour {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  border: none;
+  border-left: 1px solid rgba(29, 78, 216, 0.35);
+  background: transparent;
+  color: #b45309;
+  cursor: pointer;
+}
+
+.guizhou-filter-chip--active .guizhou-filter-chip__tour {
+  border-left-color: rgba(255, 255, 255, 0.4);
+  color: #fde047;
+}
+
+.guizhou-filter-chip__tour:hover {
+  background: rgba(180, 83, 9, 0.1);
+}
+
+.guizhou-page__empty {
+  margin-top: 12px;
+  padding: 16px 4px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.guizhou-page__loading,
+.guizhou-page__error {
+  padding: 24px 4px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.guizhou-page__error {
+  color: #b00020;
+}

@@ -77,7 +77,7 @@ class MemoryClientMixin:
         """
         cart = self._get_cart(user_id)
         if not cart.contents:
-            return "Your cart is empty, so the total is $0.00."
+            return "Your cart is empty, so the total is ¥0.00."
 
         lines = []
         subtotal = 0.0

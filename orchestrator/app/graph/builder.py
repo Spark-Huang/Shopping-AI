@@ -20,7 +20,7 @@ def create_graph(
     config
 ) -> StateGraph:
     """
-    Create the LangGraph for Shopping AI.
+    Create the LangGraph for Guikelai.
     
     The graph orchestrates the flow between different specialized agents:
     - Memory retrieval
@@ -41,7 +41,7 @@ def create_graph(
     Returns:
         Compiled LangGraph instance
     """
-    logger.info("Creating Shopping AI graph")
+    logger.info("Creating Guikelai graph")
     
     # Set the global config for use throughout the graph
     GraphNodes.configure(config)

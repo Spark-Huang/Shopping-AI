@@ -14,6 +14,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
+from langchain_core.documents import Document
 
 from search.app import engine as retriever_mod
 from search.app import images as images_mod
@@ -21,7 +22,17 @@ from search.app.vectorstore import milvus_store as milvus_mod
 from search.app.embeddings.image import ImageEmbeddings
 from search.app.embeddings.text import RetrieverConfig, TextEmbeddings
 from search.app.engine import Retriever
+from search.app.filtering import matches_categories
 from search.app.vectorstore.milvus_store import Milvus
+
+
+def test_category_matching_uses_metadata_when_cultural_story_is_appended() -> None:
+    document = Document(
+        page_content="苗绣披肩 | 手工苗绣 | guizhou,ethnic-wear | 苗绣文化故事",
+        metadata={"category": "guizhou", "subcategory": "ethnic-wear"},
+    )
+
+    assert matches_categories(document, ["ethnic-wear"])
 
 
 # --------------------------------------------------------------------------->

@@ -85,12 +85,12 @@ def http_recorder(monkeypatch: pytest.MonkeyPatch) -> _HttpRecorder:
 
     def _fake_post(url: str, json: Dict[str, Any], timeout: int = 10, **kwargs: Any):
         recorder.posts.append({"url": url, "json": json, "timeout": timeout, **kwargs})
-        if url.endswith("/safety/input/check"):
+        if url.endswith("/safety/input"):
             # Echo query back → is_safe True.
             return _FakeResponse(
                 {"response": [{"role": "assistant", "content": json["query"]}]}
             )
-        if url.endswith("/safety/output/check"):
+        if url.endswith("/safety/output"):
             return _FakeResponse(
                 {"response": [{"role": "assistant", "content": json["query"]}]}
             )
@@ -135,7 +135,7 @@ class TestGetMemory:
         result = await GraphNodes.get_memory(state)
 
         assert result.next_agent == ""
-        assert result.response == "1 orders, total $49.99 this month: Silk Dress"
+        assert result.response == "1 orders, total ¥49.99 this month: Silk Dress"
 
     async def test_spending_recall_with_no_current_orders_reports_zero(
         self, install_config, monkeypatch: pytest.MonkeyPatch
@@ -162,7 +162,7 @@ class TestGetMemory:
 
         result = await GraphNodes.get_memory(state)
 
-        assert result.response == "0 orders, total $0.00 this month"
+        assert result.response == "0 orders, total ¥0.00 this month"
 
     async def test_http_error_leaves_empty_context_and_cart(
         self,

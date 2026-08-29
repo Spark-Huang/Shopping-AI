@@ -37,7 +37,7 @@ import { scheduleSession, sleep } from "./streamSession";
 import type { ChatMessage, SessionSummary } from "./ChatWindow.types";
 
 /**
- * Main chatbox component for Shopping AI.
+ * Main chatbox component for 贵客来 (Guikelai).
  */
 
 /** How close (px) to the bottom counts as "pinned", for auto-follow scrolling. */
@@ -47,14 +47,16 @@ const RESET_CONFIRM_TIMEOUT_MS = 3000;
 
 const Chatbox: React.FC<ChatboxProps> = ({
   requestCommandRef,
+  requestTourRef,
+  requestNewChatRef,
   onCartChange,
   visible = true,
   safetyEnabled,
   onSafetyChange,
+  dialectEnabled = false,
 }) => {
   const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState<boolean>(true);
-  const [hasBeenOpened, setHasBeenOpened] = useState<boolean>(false);
   const [newMessage, setNewMessage] = useState<string>("");
   const [image, setImage] = useState("");
   const [previewImage, setPreviewImage] = useState("");
@@ -88,6 +90,9 @@ const Chatbox: React.FC<ChatboxProps> = ({
   const prevVisibleRef = useRef<boolean>(true);
   const resetConfirmTimeoutRef = useRef<number | null>(null);
   const sendInFlightRef = useRef(false);
+  // React StrictMode may replay mount effects in development. Guard the
+  // initial history/welcome load so a replay cannot append duplicate bubbles.
+  const initialConversationLoadedRef = useRef(false);
 
   const disarmResetConfirmation = () => {
     if (resetConfirmTimeoutRef.current !== null) {
@@ -98,14 +103,17 @@ const Chatbox: React.FC<ChatboxProps> = ({
   };
 
   const showWelcome = async () => {
-    setMessages([]);
-    await sleep(1000);
-    addMessage("assistant", "", "", true);
-    await sleep(1000);
-    for (const char of Array.from(t("chatbox.introduction"))) {
-      await sleep(40);
-      updateLastMessage(char);
-    }
+    const introduction = t("chatbox.introduction");
+    setMessages([
+      {
+        role: "assistant",
+        content: introduction,
+        productName: "",
+        isWelcome: true,
+      },
+    ]);
+    messageRefs.current = [React.createRef<HTMLDivElement>()];
+    setLastAssistantIndex(0);
   };
 
   const refreshSessions = async (userId: number) => {
@@ -319,6 +327,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
         image: image || "",
         image_bool: !!image,
         language: i18n.language?.startsWith("zh") ? "zh" : "en",
+        dialect: dialectEnabled,
         session_id: activeSessionId,
       };
 
@@ -433,10 +442,6 @@ const Chatbox: React.FC<ChatboxProps> = ({
     handleSendMessage(question);
   };
 
-  // Chips should appear only after the welcome typewriter finishes; otherwise
-  // a click can race with the final character update and lose the question.
-  const introductionText = t("chatbox.introduction");
-
   const handleResetClick = () => {
     if (!isResetArmed) {
       setIsResetArmed(true);
@@ -477,6 +482,29 @@ const Chatbox: React.FC<ChatboxProps> = ({
     commandRef.current = handleAddToCart;
     return () => {
       commandRef.current = null;
+    };
+  });
+
+  // Culture-tour handoff: the Guizhou page calls this ref with a themed
+  // prompt; sending it through the normal pipeline keeps the question in
+  // the transcript so the reply is grounded.
+  useEffect(() => {
+    const tourRef = requestTourRef;
+    if (!tourRef) return;
+    tourRef.current = handleSendMessage;
+    return () => {
+      tourRef.current = null;
+    };
+  });
+
+  // New-chat handoff: the Navbar "more choices" menu calls this ref to
+  // start a fresh conversation (explicit reset drops the user identity).
+  useEffect(() => {
+    const newChatRef = requestNewChatRef;
+    if (!newChatRef) return;
+    newChatRef.current = () => handleReset(true);
+    return () => {
+      newChatRef.current = null;
     };
   });
 
@@ -546,16 +574,10 @@ const Chatbox: React.FC<ChatboxProps> = ({
   }, [isLoading]);
 
   useEffect(() => {
-    if (isOpen) {
-      setHasBeenOpened(true);
-    }
+    if (!isOpen || initialConversationLoadedRef.current) return;
+    initialConversationLoadedRef.current = true;
+    void handleReset();
   }, [isOpen]);
-
-  useEffect(() => {
-    if (hasBeenOpened) {
-      handleReset();
-    }
-  }, [hasBeenOpened]);
 
   useEffect(
     () => () => {
@@ -650,7 +672,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
                 productName={msg.productName}
                 ref={messageRefs.current[index]}
                 exampleQuestions={
-                  msg.isWelcome && msg.content === introductionText
+                  msg.isWelcome
                     ? (t("chatbox.exampleQuestions", {
                         returnObjects: true,
                       }) as string[])
@@ -661,6 +683,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
                   msg.role === "image_row" ? handleAddToCart : undefined
                 }
                 cartAddInFlight={cartAddInFlight}
+                onCartChange={onCartChange}
                 onToggleFavorite={
                   msg.role === "image_row" ? handleToggleFavorite : undefined
                 }
@@ -691,28 +714,15 @@ const Chatbox: React.FC<ChatboxProps> = ({
             )}
           </div>
 
-          {/* Footer */}
+          {/* Footer: unified pill composer with side toolbar */}
           <div className="chatbox__footer">
             {/* Image preview */}
             {previewImage && (
-              <div style={{ position: "relative", display: "inline-block" }}>
-                <img
-                  src={previewImage}
-                  alt="Preview"
-                  style={{ width: "50px", height: "50px" }}
-                />
+              <div className="chatbox__preview">
+                <img src={previewImage} alt="Preview" />
                 <button
                   type="button"
-                  style={{
-                    display: "inline-flex",
-                    position: "absolute",
-                    right: "-5px",
-                    top: "-5px",
-                    cursor: "pointer",
-                    background: "transparent",
-                    border: "none",
-                    padding: 0,
-                  }}
+                  className="chatbox__preview-clear"
                   onClick={clearImage}
                   aria-label="Clear image"
                 >
@@ -721,61 +731,63 @@ const Chatbox: React.FC<ChatboxProps> = ({
               </div>
             )}
 
-            {/* Input field */}
-            <input
-              ref={inputRef}
-              type="text"
-              className="input_test"
-              placeholder={t("chatbox.placeholder")}
-              value={newMessage}
-              onChange={handleNewMessageChange}
-              onKeyUp={handleKeyUp}
-            />
+            <div className="chatbox__footer-row">
+              {/* Composer pill: transparent input + round brand send button */}
+              <div className="chatbox__composer">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  className="chatbox__composer-input"
+                  placeholder={t("chatbox.placeholder")}
+                  aria-label={t("chatbox.placeholder")}
+                  value={newMessage}
+                  onChange={handleNewMessageChange}
+                  onKeyUp={handleKeyUp}
+                />
+                <button
+                  type="button"
+                  className="chatbox__composer-send"
+                  onClick={isLoading ? () => {} : () => handleSendMessage()}
+                  disabled={isLoading}
+                  aria-label={t("chatbox.sendLabel")}
+                >
+                  <SendIcon sx={{ color: "#ffffff", fontSize: 18 }} />
+                </button>
+              </div>
 
-            {/* Action buttons (real buttons for a11y: keyboard focusable,
-                screen-reader labelled — PM review item 8) */}
-            <div className="button-class">
-              <SendIcon
-                sx={{
-                  color: isLoading ? "var(--text-tertiary)" : "var(--brand-deep)",
-                  cursor: isLoading ? "not-allowed" : "pointer",
-                }}
-                onClick={isLoading ? () => {} : () => handleSendMessage()}
-                fontSize="medium"
-                aria-label={t("chatbox.sendLabel")}
-              />
-            </div>
-
-            <div className="button-class">
-              <CancelIcon
-                sx={{ color: isResetArmed ? "var(--danger)" : "var(--text-secondary)" }}
-                onClick={handleResetClick}
-                fontSize="medium"
-                aria-label={t(
-                  isResetArmed
-                    ? "chatbox.resetConfirmLabel"
-                    : "chatbox.resetLabel"
-                )}
-              />
-            </div>
-
-            <div className="button-class">
-              <label
-                htmlFor="image-upload"
-                style={{ cursor: "pointer", display: "inline-flex" }}
-                aria-label={t("chatbox.uploadLabel")}
-                title={t("chatbox.uploadLabel")}
-              >
-                <UploadIcon sx={{ color: "var(--brand-primary)" }} fontSize="medium" />
-              </label>
-              <input
-                style={{ display: "none" }}
-                type="file"
-                accept="image/*"
-                id="image-upload"
-                name="image"
-                onChange={handleImageUpload}
-              />
+              {/* Side toolbar: image upload + reset (two-step confirm) */}
+              <div className="chatbox__toolbar">
+                <label
+                  htmlFor="image-upload"
+                  className="chatbox__tool chatbox__tool--upload"
+                  aria-label={t("chatbox.uploadLabel")}
+                  title={t("chatbox.uploadLabel")}
+                >
+                  <UploadIcon sx={{ fontSize: 20 }} />
+                </label>
+                <input
+                  style={{ display: "none" }}
+                  type="file"
+                  accept="image/*"
+                  id="image-upload"
+                  name="image"
+                  onChange={handleImageUpload}
+                />
+                <button
+                  type="button"
+                  className="chatbox__tool chatbox__tool--reset"
+                  onClick={handleResetClick}
+                  aria-label={t(
+                    isResetArmed
+                      ? "chatbox.resetConfirmLabel"
+                      : "chatbox.resetLabel"
+                  )}
+                >
+                  <CancelIcon
+                    sx={{ fontSize: 20, color: isResetArmed ? "#dc2626" : "inherit" }}
+                  />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -783,10 +795,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
         {/* Chatbox toggle button (hidden) */}
         <div className="chatbox__button" style={{ visibility: "hidden" }}>
           <button onClick={() => setIsOpen(!isOpen)}>
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Chat_icon.svg/44px-Chat_icon.svg.png"
-              alt="Chat"
-            />
+            <img src="/images/logo-guikelai.png" alt={t("brand.name")} />
           </button>
         </div>
       </div>

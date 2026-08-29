@@ -59,3 +59,57 @@ export const removeCartProduct = async (
     throw new Error(`Cart remove failed: HTTP ${response.status}`);
   }
 };
+
+/**
+ * Set the exact quantity of a cart line (the orchestrator persists with
+ * idempotent semantics, so `amount` becomes the new absolute quantity).
+ */
+export const setCartQuantity = async (
+  userId: number,
+  item: string,
+  amount: number,
+  price?: number | null,
+  url?: string | null
+): Promise<void> => {
+  const response = await authFetch(`${config.api.baseUrl}/cart/${userId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      item,
+      amount,
+      price: price ?? null,
+      url: url ?? "",
+      idempotent: true,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Cart quantity update failed: HTTP ${response.status}`);
+  }
+};
+
+export interface CheckoutResult {
+  user_id: number;
+  message: string;
+}
+
+/**
+ * Multi-select checkout: record an order per selected line and clear those
+ * lines from the cart in one backend transaction.
+ */
+export const checkoutCart = async (
+  userId: number,
+  items: { item: string; price: number | null }[]
+): Promise<CheckoutResult> => {
+  const response = await authFetch(
+    `${config.api.baseUrl}/cart/${userId}/checkout`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`Checkout failed: HTTP ${response.status}`);
+  }
+  return (await response.json()) as CheckoutResult;
+};

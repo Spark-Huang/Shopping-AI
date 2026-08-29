@@ -43,6 +43,9 @@ class _NoopAgent:
     def decide_function(self, state: State) -> str:
         return "chatter"
 
+    def generate(self, **_: Any) -> List[Dict[str, Any]]:
+        return []
+
 
 class _StubCompiledGraph:
     """Replacement for the compiled LangGraph runnable."""
@@ -138,6 +141,13 @@ class TestCreateInitialState:
         state = main_module.create_initial_state(request)
         assert state.context == ""
 
+    def test_dialect_defaults_off_and_passes_through(self, main_module) -> None:
+        request = main_module.QueryRequest(user_id=1, query="hi")
+        assert main_module.create_initial_state(request).dialect is False
+
+        request = main_module.QueryRequest(user_id=1, query="hi", dialect=True)
+        assert main_module.create_initial_state(request).dialect is True
+
 
 # ---------------------------------------------------------------------------
 # Endpoints
@@ -157,7 +167,7 @@ class TestHealthAndRoot:
         assert response.status_code == 200
 
         body = response.json()
-        assert body["message"] == "Guikela API"
+        assert body["message"] == "Guikelai API"
         assert body["version"] == "1.0.0"
         assert "query" not in body["endpoints"]
         for key in ["stream", "timing", "cart", "orders", "context", "health", "docs"]:
@@ -263,6 +273,99 @@ class TestProxyEndpoints:
         assert recorded["url"].endswith("/user/1/cart/remove")
         assert recorded["json"] == {"item": "Silk Dress", "amount": 1}
         assert recorded["headers"]["Authorization"] == _bearer()
+
+    def test_checkout_cart_passes_items_to_memory_service(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        recorded = {}
+
+        class _Response:
+            status_code = 200
+
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self):
+                return {"user_id": 1, "message": "checked out"}
+
+        def _post(url: str, json: Dict[str, Any], timeout: int):
+            recorded.update({"url": url, "json": json, "timeout": timeout})
+            return _Response()
+
+        monkeypatch.setattr(main_module.requests, "post", _post)
+
+        body = {"items": [{"item": "Silk Dress", "price": 49.99}]}
+        response = main_module.checkout_cart(1, body, authorization=_bearer())
+
+        assert response["message"] == "checked out"
+        assert recorded["url"].endswith("/user/1/checkout")
+        assert recorded["json"] == body
+
+    def test_products_serves_csv_filtered_by_category(
+        self, main_module, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        csv_path = tmp_path / "products.csv"
+        csv_path.write_text(
+            "\n".join(
+                [
+                    '"category","subcategory","name","description","url","price","image","story"',
+                    '"guizhou","ethnic-wear","苗绣披肩","手工苗绣披肩","https://example.com/s1","158","/images/products/guizhou/miao-embroidered-shawl.png","苗绣故事"',
+                    '"guizhou","food","老干妈油辣椒","贵州风味辣酱","https://example.com/s2","9","/images/products/guizhou/chili.jpg","辣椒故事"',
+                    '"other","misc","外部商品","不在贵州目录","https://example.com/s3","10","",""',
+                ]
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(main_module, "PRODUCTS_CSV", csv_path)
+
+        response = main_module.list_products(category="guizhou")
+        products = response["products"]
+
+        assert len(products) == 2
+        assert all(p["category"] == "guizhou" for p in products)
+        by_name = {p["name"]: p for p in products}
+        assert by_name["老干妈油辣椒"]["price"] == 9
+        assert by_name["老干妈油辣椒"]["subcategory"] == "food"
+        assert by_name["苗绣披肩"]["subcategory"] == "ethnic-wear"
+        assert by_name["苗绣披肩"]["image"] == (
+            "/images/products/guizhou/miao-embroidered-shawl.png"
+        )
+        # Cultural stories ride along for the showcase page and agent.
+        assert "苗绣" in by_name["苗绣披肩"]["story"]
+
+    def test_products_without_category_returns_whole_catalog(
+        self, main_module, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        csv_path = tmp_path / "products.csv"
+        csv_path.write_text(
+            "\n".join(
+                [
+                    '"category","subcategory","name","description","url","price","image","story"',
+                    '"guizhou","ethnic-wear","苗绣披肩","手工苗绣披肩","https://example.com/s1","158","/images/products/guizhou/miao-embroidered-shawl.png","苗绣故事"',
+                ]
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(main_module, "PRODUCTS_CSV", csv_path)
+
+        response = main_module.list_products(category=None)
+        products = response["products"]
+
+        assert len(products) == 1
+        categories = {p["category"] for p in products}
+        assert categories == {"guizhou"}
+        assert all(product["sourceUrl"] for product in products)
+        assert all(product["verifiedAt"] for product in products)
+
+    def test_products_returns_empty_list_when_catalog_csv_missing(
+        self, main_module, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        """Until crawler data lands, a missing CSV degrades to an empty catalog."""
+        monkeypatch.setattr(main_module, "PRODUCTS_CSV", tmp_path / "absent.csv")
+
+        response = main_module.list_products(category="guizhou")
+
+        assert response == {"products": []}
 
     def test_add_context_passes_stripped_fact_to_memory_service(
         self, main_module, monkeypatch: pytest.MonkeyPatch

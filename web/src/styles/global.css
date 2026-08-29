@@ -2,28 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== Guikelai design tokens: cinnabar, indigo, tea green, and rice paper ===== */
 :root {
-  --surface-1: rgba(247, 247, 245, 0.38);
-  --surface-2: rgba(252, 252, 251, 0.46);
-  --surface-3: rgba(238, 238, 235, 0.34);
-  --surface-outer: #d7e8f0;
-  --surface-statusbar: rgba(244, 250, 253, 0.38);
-  --surface-tabbar: rgba(241, 248, 252, 0.38);
-  --text-primary: #1d1d1f;
-  --text-secondary: #6e6e73;
-  --text-tertiary: #9b9b9f;
-  --brand-primary: #3f4246;
-  --brand-deep: #111113;
-  --quiet-accent: #7f99a8;
-  --caution: #7a5f44;
-  --danger: #9a3412;
-  --glass-fill: rgba(246, 252, 255, 0.3);
-  --glass-panel: rgba(244, 251, 255, 0.32);
-  --glass-border: rgba(255, 255, 255, 0.76);
-  --hairline: rgba(74, 100, 114, 0.12);
-  --aqua-vapor: rgba(177, 220, 242, 0.34);
-  --aqua-edge: rgba(218, 243, 255, 0.72);
-  --glass-shadow: 0 24px 76px -44px rgba(53, 83, 101, 0.52);
+  --surface-1: #fff9f0;
+  --surface-2: rgba(255, 255, 255, 0.72);
+  --surface-3: rgba(247, 237, 224, 0.7);
+  --surface-outer: #eee7dc;
+  --surface-statusbar: rgba(255, 249, 240, 0.9);
+  --surface-tabbar: rgba(255, 249, 240, 0.9);
+  --text-primary: #241f1b;
+  --text-secondary: #72675f;
+  --text-tertiary: #9b8e84;
+  --brand-primary: #a52a24;
+  --brand-deep: #291d4b;
+  --brand-green: #0f766e;
+  --brand-neon: #d8a647;
+  --brand-purple: #5d3f8c;
+  --brand-pink: #b94b58;
+  --quiet-accent: #0f766e;
+  --caution: #8a641f;
+  --danger: #b42318;
+  --glass-fill: rgba(0, 0, 0, 0.05);
+  --glass-panel: rgba(255, 251, 245, 0.42);
+  --glass-border: rgba(102, 73, 55, 0.14);
+  --hairline: rgba(83, 55, 38, 0.14);
+  --aqua-vapor: rgba(15, 118, 110, 0.12);
+  --aqua-edge: rgba(255, 255, 255, 0.68);
+  --glass-shadow: 0 24px 76px -44px rgba(92, 54, 34, 0.52);
   --radius: 8px;
   --radius-sm: 6px;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -199,6 +204,110 @@ code {
   letter-spacing: 0;
 }
 
+/* Hamburger trigger for the "more choices" dropdown */
+.status-bar__menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.status-bar__menu-trigger:hover {
+  background: rgba(165, 42, 36, 0.1);
+}
+
+/* Brand avatar next to the wordmark. */
+.status-bar__logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  box-shadow: 0 0 0 1px var(--glass-border);
+}
+
+.status-bar__brand-word {
+  font-weight: 700;
+}
+
+/* ===== "More choices" dropdown (Navbar) ===== */
+.status-bar {
+  position: relative;
+}
+
+.brand-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 12px;
+  z-index: 60;
+  min-width: 172px;
+  padding: 6px;
+  border-radius: calc(var(--radius) * 1.2);
+  background: var(--surface-2);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 12px 32px rgba(10, 38, 71, 0.16);
+  animation: brand-menu-fade-in 0.16s var(--ease-out-expo);
+}
+
+@keyframes brand-menu-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.brand-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.brand-menu__item:hover {
+  background: rgba(29, 78, 216, 0.08);
+  color: var(--brand-deep);
+}
+
+.brand-menu__item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.brand-menu__item:hover .brand-menu__item-icon {
+  color: var(--brand-primary);
+}
+
+.brand-menu__version {
+  padding: 8px 10px 4px;
+  border-top: 1px solid var(--glass-border);
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+
 .status-bar__brand-dot {
   width: 7px;
   height: 7px;
@@ -353,6 +462,15 @@ li {
   justify-content: center;
   gap: 8px;
   padding: 28px 0 20px;
+}
+
+.me-page__brand-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  box-shadow: 0 0 0 1px var(--glass-border);
 }
 
 .me-page__brand-dot {

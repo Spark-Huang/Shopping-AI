@@ -967,7 +967,7 @@ class TestViewCartTotal:
         _install_http_stubs(monkeypatch, cart_before=[])
 
         out = cart_agent._view_cart_total(user_id=1)
-        assert "$0.00" in out
+        assert "¥0.00" in out
         assert "empty" in out.lower()
 
     def test_totals_and_line_items_rendered(

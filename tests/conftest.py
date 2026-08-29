@@ -50,8 +50,10 @@ def base_config() -> SimpleNamespace:
         routing_prompt="You are a routing assistant.",
         chatter_prompt=(
             "You are a helpful Shopping AI assistant.\n"
-            "REAL UI CAPABILITIES: view/add/remove cart items and visit each "
-            "item's external merchant link; no in-site checkout or payment button.\n"
+            "REAL UI CAPABILITIES: view/add/remove cart items, edit quantities, "
+            "multi-select and check out selected items (records orders and "
+            "clears them from the cart), and visit each item's external "
+            "merchant link.\n"
             "BUDGET AWARENESS: if a prior budget appears in RECENT DISCUSSION, "
             "flag over-budget recommendations with `Budget alert:` and offer "
             "in-budget alternatives."
@@ -62,6 +64,10 @@ def base_config() -> SimpleNamespace:
             "dress",
             "shoes",
             "top blouse sweater",
+            "ethnic-wear",
+            "craft",
+            "food",
+            "drink",
         ],
         agent_choices=["cart", "retriever", "chatter"],
         memory_length=16384,

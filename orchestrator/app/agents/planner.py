@@ -1,6 +1,6 @@
 
 """
-Query routing agent for Shopping AI.
+Query routing agent for Guikelai.
 
 This module contains the PlannerAgent that determines which specialized agent
 should handle a user's query based on the query content and context.
@@ -14,6 +14,7 @@ from typing import Tuple, Dict, List
 from openai import OpenAI
 
 from .state import State, Cart
+from .llm_extras import no_thinking_extra_body
 
 
 # Configure logging
@@ -69,7 +70,9 @@ class PlannerAgent:
         try:
             self.model = OpenAI(
                 base_url=self.llm_port,
-                api_key=os.environ.get("LLM_API_KEY")
+                api_key=os.environ.get("LLM_API_KEY"),
+                timeout=getattr(config, "llm_timeout_seconds", 60.0),
+                max_retries=1,
             )
             logger.info("PlannerAgent.__init__() | initialization complete")
         except Exception as e:
@@ -84,7 +87,7 @@ class PlannerAgent:
             query: The user's query to route
             has_image: Whether the current turn includes an attached image.
                 The router needs this signal so that deictic queries like
-                "do you have this under $100" can be resolved against the
+                "do you have this under ¥100" can be resolved against the
                 image instead of being treated as a question about a named
                 product that doesn't exist in context.
 
@@ -122,7 +125,7 @@ class PlannerAgent:
                 messages=messages,
                 temperature=0.0,
                 max_tokens=100,
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}}
+                extra_body=no_thinking_extra_body()
             )
             
             response_content = response.choices[0].message.content.strip().lower()
