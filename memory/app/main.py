@@ -139,6 +139,7 @@ def _order_dict(order: Order) -> dict:
         "price": order.price,
         "purchased_at": order.purchased_at.isoformat() if order.purchased_at else None,
         "note": order.note,
+        "image": order.image,
     }
 
 
@@ -515,6 +516,7 @@ async def checkout(user_id: int, checkout_request: CheckoutRequest):
                 price=total_price,
                 purchased_at=datetime.now(UTC),
                 note=f"Checked out x{cart_item.amount}",
+                image=cart_item.image,
             )
             db.add(order)
             created_orders.append(order)

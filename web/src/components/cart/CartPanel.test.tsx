@@ -51,8 +51,12 @@ describe("CartPanel multi-select checkout", () => {
       })
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /^checkout \(3 · cny ¥108\.98\)$/i })
+      screen.getByRole("button", {
+        name: /^move to orders \(3 · cny ¥108\.98\)$/i,
+      })
     );
+    expect(screen.getByText("Confirm move to Orders")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^move$/i }));
 
     await waitFor(() =>
       expect(toastMock.success).toHaveBeenCalledWith(
@@ -91,6 +95,10 @@ describe("CartPanel item deletion", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: /delete silk dress/i })
     );
+
+    expect(screen.getByText("Remove from cart")).toBeTruthy();
+    expect(screen.getByText('Remove "Silk Dress"?')).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^remove$/i }));
 
     await waitFor(() =>
       expect(toastMock.success).toHaveBeenCalledWith(

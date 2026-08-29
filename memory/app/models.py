@@ -53,6 +53,7 @@ class Order(Base):
     price = Column(Float, nullable=True)
     purchased_at = Column(DateTime)
     note = Column(Text, nullable=True)
+    image = Column(Text, nullable=True)
 
 
 class Message(Base):

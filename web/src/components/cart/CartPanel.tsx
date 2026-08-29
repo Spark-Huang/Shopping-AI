@@ -16,6 +16,14 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from "@mui/material";
 import { useTranslation } from "react-i18next";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -94,6 +102,8 @@ const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onO
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [checkingOut, setCheckingOut] = useState(false);
+  const [confirmingCheckout, setConfirmingCheckout] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<CartItemData | null>(null);
   const { t } = useTranslation();
 
   const refresh = useCallback(async () => {
@@ -182,7 +192,9 @@ const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onO
     }
   };
 
-  const handleDelete = async (item: CartItemData) => {
+  const handleDelete = async () => {
+    const item = pendingRemoval;
+    if (!item) return;
     markBusy(item.item, true);
     try {
       await removeCartProduct(getOrCreateUserId(), item.item, item.amount);
@@ -193,6 +205,7 @@ const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onO
       toast.error(t("cart.removeFailed", { item: item.item }));
     } finally {
       markBusy(item.item, false);
+      setPendingRemoval(null);
     }
   };
 
@@ -215,6 +228,7 @@ const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onO
       toast.error(t("cart.checkoutFailed"));
     } finally {
       setCheckingOut(false);
+      setConfirmingCheckout(false);
     }
   };
 
@@ -330,7 +344,7 @@ const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onO
                   className="cart-page__item-delete"
                   disabled={busy.has(it.item)}
                   aria-label={t("cart.delete", { item: it.item })}
-                  onClick={() => handleDelete(it)}
+                  onClick={() => setPendingRemoval(it)}
                 >
                   <DeleteOutlineIcon fontSize="small" />
                 </button>
@@ -374,7 +388,7 @@ const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onO
               type="button"
               className="cart-page__checkout"
               disabled={selected.size === 0 || checkingOut}
-              onClick={handleCheckout}
+              onClick={() => setConfirmingCheckout(true)}
             >
               {checkingOut
                 ? t("cart.checkingOut")
@@ -385,6 +399,41 @@ const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onO
           </div>
         )}
       </div>
+      <Dialog open={confirmingCheckout} onClose={() => setConfirmingCheckout(false)}>
+        <DialogTitle>{t("cart.checkoutDialogTitle")}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{t("cart.checkoutDialogBody")}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmingCheckout(false)}>
+            {t("cart.checkoutDialogCancel")}
+          </Button>
+          <Button onClick={handleCheckout} autoFocus disabled={checkingOut}>
+            {t("cart.checkoutDialogConfirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={Boolean(pendingRemoval)} onClose={() => setPendingRemoval(null)}>
+        <DialogTitle>{t("cart.deleteDialogTitle")}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("cart.deleteDialogBody", { item: pendingRemoval?.item ?? "" })}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingRemoval(null)}>
+            {t("cart.deleteDialogCancel")}
+          </Button>
+          <Button
+            color="error"
+            onClick={handleDelete}
+            autoFocus
+            disabled={Boolean(pendingRemoval && busy.has(pendingRemoval.item))}
+          >
+            {t("cart.deleteDialogConfirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </section>
   );
 };

@@ -56,7 +56,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         externalUrl: product.url,
         price: product.price,
       });
-      toast.success(t("cart.added", { item: product.name }));
+      toast.success(t("cart.added"), { autoClose: 1500, className: "toast-pill" });
       onCartChange?.();
     } catch (error) {
       console.error("ProductDetailModal: failed to add to cart", error);

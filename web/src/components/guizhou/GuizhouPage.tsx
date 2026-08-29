@@ -198,7 +198,7 @@ const GuizhouPage: React.FC<GuizhouPageProps> = ({ onCartChange, onTourStart }) 
         externalUrl: product.url,
         price: product.price,
       });
-      toast.success(t("guizhou.added", { item: product.name }));
+      toast.success(t("cart.added"), { autoClose: 1500, className: "toast-pill" });
       onCartChange?.();
     } catch (error) {
       console.error("GuizhouPage: failed to add to cart", error);

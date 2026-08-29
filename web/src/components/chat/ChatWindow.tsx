@@ -511,7 +511,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
     setCartAddInFlight(true);
     try {
       await addCartProduct(getOrCreateUserId(), productDetails);
-      toast.success(t("cart.added", { item: productDetails.productName }));
+      toast.success(t("cart.added"), { autoClose: 1500, className: "toast-pill" });
       onCartChange?.();
     } catch (error) {
       console.error("Chatbox: direct cart add failed", error);

@@ -27,6 +27,7 @@ from memory.app import main as memory_main
 memory_main.engine = memory_database.engine
 memory_main.Base = memory_database.Base
 memory_main._ensure_cart_columns = memory_database._ensure_cart_columns
+memory_main._ensure_order_columns = memory_database._ensure_order_columns
 memory_main._ensure_cart_unique_index = memory_database._ensure_cart_unique_index
 memory_main.CartItem = memory_models.CartItem
 memory_main.User = memory_models.User
@@ -104,9 +105,40 @@ class TestCartMigration:
             assert legacy_column not in before
         memory_main._ensure_cart_columns()
         memory_main._ensure_cart_columns()
+
         with engine.connect() as conn:
             after = {column["name"] for column in inspect(conn).get_columns(table.name)}
             assert {"price", "url", "image"} <= after
+
+    def test_order_image_column_migrates_idempotently(
+        self, isolated_memory_db: None
+    ) -> None:
+        table = memory_main.Order.__table__
+        legacy_columns = [
+            Column(column.name, column.type, primary_key=column.primary_key)
+            for column in table.columns
+            if column.name != "image"
+        ]
+        legacy_metadata = memory_main.Base.metadata.__class__()
+        Table(table.name, legacy_metadata, *legacy_columns)
+
+        table.drop(bind=memory_main.engine, checkfirst=True)
+        legacy_metadata.tables[table.name].create(bind=memory_main.engine)
+
+        with memory_main.engine.connect() as conn:
+            before = {
+                column["name"] for column in inspect(conn).get_columns(table.name)
+            }
+            assert "image" not in before
+
+        memory_main._ensure_order_columns()
+        memory_main._ensure_order_columns()
+
+        with memory_main.engine.connect() as conn:
+            after = {
+                column["name"] for column in inspect(conn).get_columns(table.name)
+            }
+            assert "image" in after
 
     def test_cart_image_persists_and_is_returned(
         self, client: TestClient
@@ -279,7 +311,12 @@ class TestCartFlows:
         )
         client.post(
             "/user/1/cart/add",
-            json={"item": "Silk Dress", "amount": 2, "price": 49.99},
+            json={
+                "item": "Silk Dress",
+                "amount": 2,
+                "price": 49.99,
+                "image": "https://example.com/dress.jpg",
+            },
         )
 
         cart = client.get("/user/1/cart").json()["cart"][0]
@@ -396,7 +433,12 @@ class TestCartFlows:
     ) -> None:
         client.post(
             "/user/1/cart/add",
-            json={"item": "Silk Dress", "amount": 2, "price": 49.99},
+            json={
+                "item": "Silk Dress",
+                "amount": 2,
+                "price": 49.99,
+                "image": "https://example.com/dress.jpg",
+            },
         )
         client.post(
             "/user/1/cart/add",
@@ -429,6 +471,7 @@ class TestCartFlows:
         by_name = {order["item"]: order for order in orders}
         assert by_name["Silk Dress"]["price"] == pytest.approx(99.98)
         assert by_name["Silk Dress"]["note"] == "Checked out x2"
+        assert by_name["Silk Dress"]["image"] == "https://example.com/dress.jpg"
         assert by_name["Lao Gan Ma Chili Crisp"]["price"] == pytest.approx(9)
 
         # Settled lines are gone; the untouched one remains.

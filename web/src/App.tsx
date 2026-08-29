@@ -188,7 +188,7 @@ const App: React.FC = () => {
           cartCount={cartCount}
         />
       </div>
-      <ToastContainer position="top-center" />
+      <ToastContainer position="top-center" autoClose={1500} />
     </div>
   );
 };

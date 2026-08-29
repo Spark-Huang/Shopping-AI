@@ -59,11 +59,9 @@ export const showCartNotification = (
   shownOperations.add(operationKey);
   onCartChange?.();
 
-  const message =
-    cartOperation.type === "add"
-      ? i18n.t("cart.added", { item: cartOperation.item })
-      : i18n.t("cart.removed", { item: cartOperation.item });
-
-  if (cartOperation.type === "add") toast.success(message);
-  else toast.info(message);
+  if (cartOperation.type === "add") {
+    toast.success(i18n.t("cart.added"), { autoClose: 1500, className: "toast-pill" });
+    return;
+  }
+  toast.info(i18n.t("cart.removed", { item: cartOperation.item }));
 };

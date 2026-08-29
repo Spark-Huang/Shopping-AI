@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import BrokenImageOutlinedIcon from "@mui/icons-material/BrokenImageOutlined";
 import { fetchOrders } from "../../api/ordersApi";
 import { fetchHistory } from "../../api/historyApi";
 import { getOrCreateUserId } from "../../lib/identity";
@@ -23,6 +24,7 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
   onOrderChange,
 }) => {
   const { t } = useTranslation();
+  const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [budget, setBudget] = useState<number | null>(null);
@@ -140,6 +142,22 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
           <div className="orders-list">
             {orders.map((order) => (
               <article className="orders-item" key={order.id}>
+                {(order.image?.startsWith("http://") || order.image?.startsWith("https://")) &&
+                !failedImages.has(order.id) ? (
+                  <img
+                    className="orders-item__thumb"
+                    src={order.image}
+                    alt={order.item}
+                    loading="lazy"
+                    onError={() =>
+                      setFailedImages((current) => new Set(current).add(order.id))
+                    }
+                  />
+                ) : (
+                  <span className="orders-item__thumb" aria-hidden="true">
+                    <BrokenImageOutlinedIcon />
+                  </span>
+                )}
                 <span className="orders-item__name">{order.item}</span>
                 {order.price != null && <span>{formatCny(order.price)}</span>}
                 {order.purchased_at && (

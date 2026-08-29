@@ -37,6 +37,7 @@ describe("OrdersPage budget comparison", () => {
                 id: 1,
                 item: "Silk Dress",
                 price: 69.99,
+                image: "https://example.com/dress.jpg",
                 purchased_at: new Date().toISOString(),
               },
             ],
@@ -52,6 +53,7 @@ describe("OrdersPage budget comparison", () => {
     render(<OrdersPage refreshSignal={0} onBack={vi.fn()} />);
 
     expect(await screen.findByTestId("orders-budget")).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Silk Dress" })).toBeTruthy();
     expect(screen.getByText("CNY ¥19.99 over")).toBeTruthy();
     expect(screen.getByRole("progressbar")).toBeTruthy();
   });

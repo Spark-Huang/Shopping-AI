@@ -61,6 +61,20 @@ def _ensure_cart_columns() -> None:
         conn.commit()
 
 
+def _ensure_order_columns() -> None:
+    """Idempotently add columns used by legacy orders tables."""
+    with _current_engine.connect() as conn:
+        columns = conn.execute(text("PRAGMA table_info(orders)")).fetchall()
+        if columns and "image" not in {column[1] for column in columns}:
+            try:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN image TEXT"))
+                conn.commit()
+                logging.info("memory | added image column to orders")
+            except Exception as exc:
+                logging.warning("memory | could not add image column to orders: %s", exc)
+        conn.commit()
+
+
 def _ensure_user_columns() -> None:
     """Idempotently add auth columns to users tables created before they existed."""
     with _current_engine.connect() as conn:
@@ -143,6 +157,7 @@ def initialize_database() -> None:
 
     Base.metadata.create_all(bind=_current_engine)
     _ensure_cart_columns()
+    _ensure_order_columns()
     _ensure_user_columns()
     _ensure_session_columns()
     _configure_sqlite()

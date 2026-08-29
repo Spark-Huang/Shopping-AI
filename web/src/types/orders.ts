@@ -4,6 +4,7 @@ export interface OrderData {
   price: number | null;
   purchased_at: string | null;
   note?: string | null;
+  image?: string | null;
 }
 
 export interface OrdersResponse {
