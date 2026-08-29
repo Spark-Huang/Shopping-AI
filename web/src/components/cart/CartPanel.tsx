@@ -68,6 +68,8 @@ interface CartPanelProps {
   onOrderChange?: () => void;
 }
 
+import { proxiedImage } from "../../lib/imgUrl";
+
 const CartThumbnail: React.FC<{ src: string | null | undefined; alt: string }> = ({
   src,
   alt,
@@ -86,7 +88,7 @@ const CartThumbnail: React.FC<{ src: string | null | undefined; alt: string }> =
   return (
     <img
       className="cart-page__item-thumb"
-      src={src ?? undefined}
+      src={proxiedImage(src) || undefined}
       alt={alt}
       loading="lazy"
       onError={() => setFailed(true)}

@@ -12,6 +12,7 @@
  *   action and external buy links.
  */
 
+import { proxiedImage } from "../../lib/imgUrl";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
@@ -315,7 +316,7 @@ const GuizhouPage: React.FC<GuizhouPageProps> = ({ onCartChange, onTourStart }) 
                     >
                       <span className="guizhou-carousel__media">
                         <img
-                          src={product.image}
+                          src={proxiedImage(product.image)}
                           alt={product.name}
                           loading="lazy"
                         />
@@ -411,7 +412,7 @@ const GuizhouPage: React.FC<GuizhouPageProps> = ({ onCartChange, onTourStart }) 
                   >
                     <div className="guizhou-card__media">
                       <img
-                        src={product.image}
+                        src={proxiedImage(product.image)}
                         alt={product.name}
                         loading="lazy"
                       />
@@ -487,7 +488,7 @@ const GuizhouPage: React.FC<GuizhouPageProps> = ({ onCartChange, onTourStart }) 
                 >
                   <div className="guizhou-card__media">
                     <img
-                      src={product.image}
+                      src={proxiedImage(product.image)}
                       alt={product.name}
                       loading="lazy"
                     />

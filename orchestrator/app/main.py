@@ -658,6 +658,40 @@ def _list_products_from_milvus() -> list[dict[str, Any]]:
     return products
 
 
+@app.get("/img")
+def proxy_image(url: str = Query(...)):
+    """Stream external product images through the backend.
+
+    Fixes hotlink protection (sends no Referer, browser-like UA) and mixed
+    content (http images on https pages) in one place.
+    """
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="invalid url")
+    host = url.split("/")[2]
+    if not any(d in host for d in ("yiwugo.com", "ddimg.cn", "piaojia.cn")):
+        raise HTTPException(status_code=403, detail="host not allowed")
+    try:
+        upstream = requests.get(
+            url,
+            timeout=8,
+            stream=True,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0",
+                "Referer": f"https://{host}/",
+            },
+        )
+    except requests.exceptions.RequestException:
+        raise HTTPException(status_code=502, detail="upstream failed")
+    if upstream.status_code != 200:
+        raise HTTPException(status_code=502, detail="upstream error")
+    content_type = upstream.headers.get("Content-Type", "image/jpeg")
+    return StreamingResponse(
+        upstream.raw,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
 @app.get("/orders/{user_id}")
 def get_orders(user_id: int, authorization: Optional[str] = Header(default=None)):
     """Read-only proxy to the memory service's manual-orders endpoint."""

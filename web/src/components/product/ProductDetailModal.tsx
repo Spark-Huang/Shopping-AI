@@ -12,6 +12,7 @@
  * - Closes on overlay click, the close button and Escape.
  */
 
+import { proxiedImage } from "../../lib/imgUrl";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
@@ -117,7 +118,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           <CloseIcon fontSize="small" />
         </button>
         <div className="product-detail-modal__media">
-          <img src={product.image} alt={product.name} />
+          <img src={proxiedImage(product.image)} alt={product.name} />
           <span className="product-detail-modal__image-notice">
             {t("productDetail.imageNotice")}
           </span>

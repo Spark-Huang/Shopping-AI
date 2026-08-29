@@ -1,3 +1,4 @@
+import { proxiedImage } from "../../lib/imgUrl";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
@@ -146,7 +147,7 @@ const OrdersPage: React.FC<OrdersPageProps> = ({
                 !failedImages.has(order.id) ? (
                   <img
                     className="orders-item__thumb"
-                    src={order.image}
+                    src={proxiedImage(order.image)}
                     alt={order.item}
                     loading="lazy"
                     onError={() =>

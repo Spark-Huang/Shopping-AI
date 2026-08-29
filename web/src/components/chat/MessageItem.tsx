@@ -15,6 +15,7 @@ import { fetchProducts } from "../../api/productsApi";
 import { ChatMessageProps, ImageContent, ImageRowContent } from "../../types/chat";
 import { CatalogProduct } from "../../types/product";
 import { isSaysNo } from "../../lib/share";
+import { proxiedImage } from "../../lib/imgUrl";
 import { formatPrice } from "../../lib/currency";
 import {
   createMarkdownConverter,
@@ -291,7 +292,7 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
               >
                 <ProductImage
                   key={image.productUrl || `${image.productName}-${index}`}
-                  src={image.productUrl}
+                  src={proxiedImage(image.productUrl)}
                   name={image.productName}
                 />
               </button>
