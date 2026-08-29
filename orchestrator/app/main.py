@@ -243,6 +243,45 @@ async def generate_session_title(request: QueryRequest, authorization: Optional[
     )
     return {"scheduled": scheduled}
 
+
+@app.get("/config/freshness")
+def freshness_get(authorization: Optional[str] = Header(default=None)):
+    """Read the product freshness setting from the search service."""
+    try:
+        response = requests.get(
+            f"{config.retriever_port}/config/freshness",
+            headers={"Authorization": authorization},
+            timeout=10,
+        )
+        if response.status_code >= 400:
+            detail = response.json().get("detail", "Invalid data freshness setting")
+            raise HTTPException(status_code=response.status_code, detail=detail)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as exc:
+        logger.error("orchestrator | /config/freshness | search service call failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Failed to fetch data freshness")
+
+
+@app.post("/config/freshness")
+def freshness_set(request: Dict, authorization: Optional[str] = Header(default=None)):
+    """Save the product freshness setting through the search service."""
+    try:
+        response = requests.post(
+            f"{config.retriever_port}/config/freshness",
+            json=request,
+            headers={"Authorization": authorization},
+            timeout=10,
+        )
+        if response.status_code >= 400:
+            detail = response.json().get("detail", "Invalid data freshness setting")
+            raise HTTPException(status_code=response.status_code, detail=detail)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as exc:
+        logger.error("orchestrator | /config/freshness | search service call failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Failed to save data freshness")
+
 @app.post("/query/timing", response_model=QueryResponse)
 async def process_query_timing(
     request: QueryRequest,

@@ -40,6 +40,17 @@ def load_freshness_hours() -> float:
     return DEFAULT_FRESHNESS_HOURS
 
 
+def save_freshness_hours(value: float) -> float:
+    if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
+        raise ValueError("data_freshness_hours must be a positive number")
+    freshness_file = Path(
+        os.environ.get("DATA_FRESHNESS_FILE", "/tmp/shopping-ai-data-freshness")
+    )
+    freshness_file.parent.mkdir(parents=True, exist_ok=True)
+    freshness_file.write_text(str(float(value)), encoding="utf-8")
+    return float(value)
+
+
 def is_fresh(
     crawled_at: str | None, ttl_hours: float, now: datetime | None = None
 ) -> FreshnessDecision:

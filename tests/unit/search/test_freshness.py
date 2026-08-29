@@ -1,11 +1,14 @@
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from crawler.fetcher import CrawlError
 from search.app.freshness import (
     DEFAULT_FRESHNESS_HOURS,
     FreshnessService,
     is_fresh,
     load_freshness_hours,
+    save_freshness_hours,
 )
 
 
@@ -49,3 +52,14 @@ def test_freshness_configuration_uses_setting_env_and_default(tmp_path, monkeypa
     assert load_freshness_hours() == 12
     setting.write_text("6", encoding="utf-8")
     assert load_freshness_hours() == 6
+
+
+def test_save_freshness_configuration_persists_positive_values(tmp_path, monkeypatch):
+    setting = tmp_path / "freshness"
+    monkeypatch.setenv("DATA_FRESHNESS_FILE", str(setting))
+    assert save_freshness_hours(36.5) == 36.5
+    assert setting.read_text(encoding="utf-8") == "36.5"
+
+    for invalid_value in (0, -1):
+        with pytest.raises(ValueError):
+            save_freshness_hours(invalid_value)

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import time
-from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -12,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from search.app.embeddings.text import RetrieverConfig
 from search.app.engine import Retriever
-from search.app.freshness import load_freshness_hours
+from search.app.freshness import load_freshness_hours, save_freshness_hours
 from search.app.settings import apply_endpoint_overrides, load_config_with_overrides, search_config_path
 
 
@@ -91,9 +90,6 @@ os.environ.setdefault("EMBED_API_KEY", "EMPTY")
 retriever = Retriever(_config)
 retriever.milvus_from_csv(_data["data_path"])
 
-_freshness_file = Path(
-    os.environ.get("DATA_FRESHNESS_FILE", "/tmp/shopping-ai-data-freshness")
-)
 
 
 @app.get("/config/freshness")
@@ -103,12 +99,12 @@ async def get_freshness():
 
 @app.post("/config/freshness")
 async def set_freshness(request: FreshnessSettingRequest):
-    if request.data_freshness_hours <= 0:
-        raise HTTPException(status_code=422, detail="data_freshness_hours must be positive")
-    _freshness_file.parent.mkdir(parents=True, exist_ok=True)
-    _freshness_file.write_text(str(request.data_freshness_hours), encoding="utf-8")
-    retriever.freshness.ttl_hours = request.data_freshness_hours
-    return {"data_freshness_hours": request.data_freshness_hours}
+    try:
+        saved_value = save_freshness_hours(request.data_freshness_hours)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    retriever.freshness.ttl_hours = saved_value
+    return {"data_freshness_hours": saved_value}
 
 
 @app.post("/query/text")

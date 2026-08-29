@@ -193,6 +193,41 @@ class TestProxyEndpoints:
         assert len(requests_seen) == 2
         assert all(headers["Authorization"] == token for _, _, headers in requests_seen)
 
+    def test_freshness_routes_forward_authorization_to_search(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        token = _bearer()
+        requests_seen = []
+
+        class _Response:
+            status_code = 200
+
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self):
+                return {"data_freshness_hours": 36.5}
+
+        def _request(method: str, url: str, **kwargs):
+            requests_seen.append((method, url, kwargs))
+            return _Response()
+
+        monkeypatch.setattr(main_module.requests, "get", lambda url, **kwargs: _request("GET", url, **kwargs))
+        monkeypatch.setattr(main_module.requests, "post", lambda url, **kwargs: _request("POST", url, **kwargs))
+
+        assert main_module.freshness_get(authorization=token) == {
+            "data_freshness_hours": 36.5
+        }
+        assert main_module.freshness_set(
+            {"data_freshness_hours": 36.5}, authorization=token
+        ) == {"data_freshness_hours": 36.5}
+
+        assert len(requests_seen) == 2
+        assert all(url.endswith("/config/freshness") for _, url, _ in requests_seen)
+        assert all(
+            kwargs["headers"]["Authorization"] == token for *_, kwargs in requests_seen
+        )
+
     def test_remove_cart_item_passes_body_to_memory_service(
         self, main_module, monkeypatch: pytest.MonkeyPatch
     ) -> None:
