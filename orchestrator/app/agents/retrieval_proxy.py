@@ -68,7 +68,8 @@ class RetrieverAgent(QueryFilterMixin):
         normalized_entities = sorted(str(entity).casefold() for entity in entities)
         normalized_categories = sorted(str(category).casefold() for category in categories)
         normalized_filters = sorted(
-            (str(name).casefold(), float(value)) for name, value in filters.items()
+            (str(name).casefold(), value if isinstance(value, str) else float(value))
+            for name, value in filters.items()
         )
         payload = json.dumps(
             [normalized_entities, normalized_categories, normalized_filters, bool(image), k],

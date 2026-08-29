@@ -34,8 +34,8 @@ def _inject_openai_params(config) -> None:
         params = getattr(model, "parameters", None)
         if params is None:
             params = {}
-        params.setdefault("base_url", base_url)
-        params.setdefault("api_key", api_key)
+        params["base_url"] = base_url
+        params["api_key"] = api_key
         model.parameters = params
         if model_name:
             model.model = model_name

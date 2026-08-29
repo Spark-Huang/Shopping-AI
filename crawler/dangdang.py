@@ -93,6 +93,8 @@ def parse_products(html: str, category: str) -> list[Product]:
             (child for child in card.iter("a") if child.get("title")),
             None,
         )
+        if sku.startswith("p") and sku[1:].isdigit():
+            sku = sku[1:]
         if not sku.isdigit() or link is None:
             continue
         name = _clean(link.get("title"))
@@ -100,7 +102,8 @@ def parse_products(html: str, category: str) -> list[Product]:
             continue
         price_tag = None
         for child in card.iter("span"):
-            if "price_n" in child.get("class", []):
+            class_names = child.get("class", [])
+            if "price_n" in class_names or "search_now_price" in class_names:
                 price_tag = child
                 break
         image_tag = next((child for child in card.iter("img")), None)
