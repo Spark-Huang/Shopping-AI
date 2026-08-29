@@ -8,4 +8,4 @@ sim_threshold: 0.5
 text_collection: "shopping_ai_text"
 image_collection: "shopping_ai_images"
 category_prefilter_k: 50
-data_path: "/app/platform/data/products-empty.csv"
+data_path: "/app/platform/data/products.csv"

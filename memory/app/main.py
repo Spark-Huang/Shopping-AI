@@ -456,6 +456,9 @@ async def remove_cart(user_id: int, item_update: ItemUpdate):
 async def checkout(user_id: int, checkout_request: CheckoutRequest):
     """Settle the selected cart lines: record one order per line, then clear them from the cart.
 
+    TODO: Add service-level authentication once port 8011 is exposed beyond
+    the trusted demo network.
+
     The order price is the line total (unit price x cart amount) so the
     orders summary reflects actual spending; the amount is kept in the note.
     """

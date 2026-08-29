@@ -568,6 +568,7 @@ def list_products(category: Optional[str] = Query(default=None)):
                     "price": price,
                     "image": (row.get("image") or "").strip(),
                     "story": (row.get("story") or "").strip(),
+                    "source": (row.get("source") or "guizhou_catalog").strip(),
                     "sourceName": "贵州省文旅与市场监管公开资料",
                     "sourceUrl": (
                         "https://www.mct.gov.cn/whzx/qgwhxxlb/gz/201811/"

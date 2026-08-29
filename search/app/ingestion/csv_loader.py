@@ -33,6 +33,8 @@ def milvus_from_csv(retriever: Retriever, csv_path: str, verbose: bool = False) 
 
     dataframe = pd.read_csv(csv_path)
     metadatas = dataframe.to_dict(orient="records")
+    for metadata in metadatas:
+        metadata.setdefault("source", "guizhou_catalog")
     # Optional cultural-story column: when present, it is appended to the
     # embedded text so vector retrieval matches cultural queries (e.g.
     # "Miao silver intangible heritage") and the story reaches the chatter
