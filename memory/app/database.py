@@ -50,6 +50,14 @@ def _ensure_cart_columns() -> None:
                 logging.info("memory | added url column to cart_items")
             except Exception as exc:
                 logging.warning(f"memory | could not add url column: {exc}")
+
+        if "image" not in column_names:
+            try:
+                conn.execute(text("ALTER TABLE cart_items ADD COLUMN image TEXT"))
+                conn.commit()
+                logging.info("memory | added image column to cart_items")
+            except Exception as exc:
+                logging.warning(f"memory | could not add image column: {exc}")
         conn.commit()
 
 

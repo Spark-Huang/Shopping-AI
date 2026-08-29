@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 from types import SimpleNamespace
 
@@ -10,6 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from memory.app import database as memory_database
+from memory.app import models as memory_models
 from memory.app import main as memory_main
 
 
@@ -33,10 +35,9 @@ def use_memory_database(monkeypatch) -> None:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    monkeypatch.setattr(memory_main, "engine", engine)
     monkeypatch.setattr(memory_main, "SessionLocal", sessionmaker(bind=engine))
     monkeypatch.setattr(memory_database, "_current_engine", engine)
-    memory_main.Base.metadata.create_all(bind=engine)
+    memory_models.Base.metadata.create_all(bind=engine)
     return engine
 
 
@@ -70,7 +71,47 @@ def test_extract_persists_both_messages_without_blocking(
         ("user", "I prefer blue dresses"),
         ("assistant", "Noted for future searches"),
     ]
-    memory_main.Base.metadata.drop_all(bind=engine)
+    memory_models.Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+
+
+def test_session_messages_split_product_metadata(monkeypatch) -> None:
+    engine = use_memory_database(monkeypatch)
+    client = TestClient(memory_main.app)
+    memory_main.cognee_client = SimpleNamespace(settings=SimpleNamespace(embedding_enabled=False))
+    authorization = f"Bearer {memory_main.create_token(42, 'tester')}"
+    headers = {"Authorization": authorization}
+    products = {
+        "Green Tea": {
+            "image": "/tea.jpg",
+            "url": "https://example.com/tea",
+            "price": 12.5,
+            "currency": "CNY",
+        }
+    }
+
+    client.post(
+        "/user/42/sessions",
+        json={"title": "tea"},
+        headers=headers,
+    )
+    client.post(
+        "/user/42/messages/extract",
+        json={
+            "query": "buy tea",
+            "response": f"Found tea\n<!--PRODUCTS:{json.dumps(products)}-->",
+            "session_id": 1,
+        },
+        headers=headers,
+    )
+
+    response = client.get("/user/42/sessions/1/messages", headers=headers)
+    assert response.status_code == 200
+    messages = response.json()["messages"]
+    assert messages[1]["content"] == "Found tea"
+    assert messages[1]["products"] == products
+    assert messages[0]["products"] is None
+    memory_models.Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
 
@@ -96,5 +137,6 @@ def test_disabled_memory_still_persists_and_uses_context(
 
     assert response.json()["extraction_scheduled"] is False
     assert semantic.json()["context"] == "existing"
-    memory_main.Base.metadata.drop_all(bind=engine)
+    memory_models.Base.metadata.drop_all(bind=engine)
     engine.dispose()
+import json

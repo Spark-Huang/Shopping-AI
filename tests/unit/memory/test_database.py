@@ -20,5 +20,5 @@ def test_cart_add_is_idempotent_for_same_user_and_item(tmp_path, monkeypatch):
 
     cart = client.get("/user/1/cart").json()["cart"]
     assert cart == [
-        {"item": "Silk Dress", "amount": 1, "price": 49.99, "url": None}
+        {"item": "Silk Dress", "amount": 1, "price": 49.99, "url": None, "image": None}
     ]

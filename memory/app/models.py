@@ -39,6 +39,7 @@ class CartItem(Base):
     amount = Column(Integer)
     price = Column(Float, nullable=True)
     url = Column(Text, nullable=True)
+    image = Column(Text, nullable=True)
     __table_args__ = (
         Index("ux_cart_items_user_item", "user_id", "item", unique=True),
     )
@@ -129,6 +130,7 @@ class ItemUpdate(BaseModel):
     amount: int
     price: Optional[float] = None
     url: Optional[str] = Field(default=None, max_length=2048)
+    image: Optional[str] = Field(default=None, max_length=2048)
     idempotent: bool = False
 
     @field_validator("url")

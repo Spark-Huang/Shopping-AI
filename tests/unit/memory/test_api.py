@@ -67,7 +67,7 @@ def client(isolated_memory_db) -> TestClient:
 
 
 class TestCartMigration:
-    @pytest.mark.parametrize("legacy_column", ["price", "url"])
+    @pytest.mark.parametrize("legacy_column", ["price", "url", "image"])
     def test_cart_columns_migrate_idempotently(
         self,
         isolated_memory_db: None,
@@ -106,7 +106,35 @@ class TestCartMigration:
         memory_main._ensure_cart_columns()
         with engine.connect() as conn:
             after = {column["name"] for column in inspect(conn).get_columns(table.name)}
-            assert {"price", "url"} <= after
+            assert {"price", "url", "image"} <= after
+
+    def test_cart_image_persists_and_is_returned(
+        self, client: TestClient
+    ) -> None:
+        response = client.post(
+            "/user/1/cart/add",
+            json={
+                "item": "Silk Dress",
+                "amount": 1,
+                "price": 49.9,
+                "url": "https://example.com/dress",
+                "image": "https://example.com/dress.jpg",
+                "idempotent": True,
+            },
+        )
+
+        assert response.status_code == 200
+        cart_response = client.get("/user/1/cart")
+        assert cart_response.status_code == 200
+        assert cart_response.json()["cart"] == [
+            {
+                "item": "Silk Dress",
+                "amount": 1,
+                "price": 49.9,
+                "url": "https://example.com/dress",
+                "image": "https://example.com/dress.jpg",
+            }
+        ]
 
     def test_cart_duplicates_are_removed_and_unique_index_is_idempotent(
         self, isolated_memory_db: None
@@ -218,7 +246,7 @@ class TestCartFlows:
         assert "added 1" in response.json()["message"]
 
         listed = client.get("/user/1/cart").json()["cart"][0]
-        assert {key: value for key, value in listed.items() if key != "url"} == {
+        assert {key: value for key, value in listed.items() if key not in {"url", "image"}} == {
             "item": "Silk Dress",
             "amount": 1,
             "price": 49.99,

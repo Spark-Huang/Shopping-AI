@@ -1,5 +1,7 @@
 import asyncio
+import json
 import logging
+import re
 import time
 from datetime import UTC, datetime
 from typing import Optional
@@ -121,7 +123,13 @@ async def me(authorization: Optional[str] = Header(default=None)):
 
 
 def _cart_item_dict(item: CartItem) -> dict:
-    return {"item": item.item, "amount": item.amount, "price": item.price, "url": item.url}
+    return {
+        "item": item.item,
+        "amount": item.amount,
+        "price": item.price,
+        "url": item.url,
+        "image": item.image,
+    }
 
 
 def _order_dict(order: Order) -> dict:
@@ -134,12 +142,29 @@ def _order_dict(order: Order) -> dict:
     }
 
 
+PRODUCTS_MARKER_PATTERN = re.compile(
+    r"(?:^|\n)<!--PRODUCTS:(?P<products>.*?)-->(?:\n|$)", re.DOTALL
+)
+
+
 def _message_dict(message: Message) -> dict:
+    content = message.content
+    products = None
+    match = PRODUCTS_MARKER_PATTERN.search(content)
+    if match:
+        try:
+            parsed = json.loads(match.group("products"))
+            if isinstance(parsed, dict):
+                products = parsed
+                content = PRODUCTS_MARKER_PATTERN.sub("", content).strip()
+        except json.JSONDecodeError:
+            products = None
     return {
         "id": message.id,
         "user_id": message.user_id,
         "role": message.role,
-        "content": message.content,
+        "content": content,
+        "products": products,
         "created_at": message.created_at.isoformat() if message.created_at else None,
         "session_id": message.session_id,
     }
@@ -379,6 +404,7 @@ async def add_to_cart(user_id: int, item_update: ItemUpdate):
         amount = item_update.amount
         price = item_update.price
         url = item_update.url
+        image = item_update.image
         cart_item = db.query(CartItem).filter(CartItem.user_id == user_id, CartItem.item == item).first()
         if cart_item:
             cart_item.amount = amount if item_update.idempotent else cart_item.amount + amount
@@ -388,8 +414,17 @@ async def add_to_cart(user_id: int, item_update: ItemUpdate):
                 cart_item.price = price
             if url is not None:
                 cart_item.url = url or None
+            if image is not None:
+                cart_item.image = image or None
         else:
-            cart_item = CartItem(user_id=user_id, item=item, amount=amount, price=price, url=url)
+            cart_item = CartItem(
+                user_id=user_id,
+                item=item,
+                amount=amount,
+                price=price,
+                url=url,
+                image=image,
+            )
             db.add(cart_item)
         db.commit()
     return {

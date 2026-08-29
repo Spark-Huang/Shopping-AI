@@ -274,6 +274,48 @@ class TestProxyEndpoints:
         assert recorded["json"] == {"item": "Silk Dress", "amount": 1}
         assert recorded["headers"]["Authorization"] == _bearer()
 
+    def test_add_cart_item_passes_image_to_memory_service(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        recorded = {}
+
+        class _Response:
+            status_code = 200
+
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self):
+                return {"user_id": 1, "message": "added"}
+
+        def _post(
+            url: str,
+            json: Dict[str, Any],
+            headers: Dict[str, str],
+            timeout: int,
+        ):
+            recorded.update({"url": url, "json": json})
+            return _Response()
+
+        monkeypatch.setattr(main_module.requests, "post", _post)
+
+        response = main_module.add_cart_item(
+            1,
+            {
+                "item": "Silk Dress",
+                "amount": 1,
+                "price": 49.9,
+                "url": "https://example.com/dress",
+                "image": "https://example.com/dress.jpg",
+            },
+            authorization=_bearer(),
+        )
+
+        assert response["message"] == "added"
+        assert recorded["url"].endswith("/user/1/cart/add")
+        assert recorded["json"]["image"] == "https://example.com/dress.jpg"
+        assert recorded["json"]["idempotent"] is True
+
     def test_checkout_cart_passes_items_to_memory_service(
         self, main_module, monkeypatch: pytest.MonkeyPatch
     ) -> None:
