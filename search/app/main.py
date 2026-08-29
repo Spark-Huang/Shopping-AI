@@ -44,11 +44,14 @@ async def retrieve_with_freshness(request: TextQueryRequest, image_bool: bool):
     should_refresh = retriever.freshness.needs_refresh(records)
     refreshed = False
     if should_refresh:
-        products, refreshed = retriever.freshness.refresh(
-            keyword, load_region()
-        )
-        if refreshed:
-            retriever.ingest_products(products)
+        try:
+            products, refreshed = retriever.freshness.refresh(
+                keyword, load_region()
+            )
+            if refreshed:
+                retriever.ingest_products(products)
+        except Exception:
+            refreshed = False
 
     result = await retriever.retrieve(
         query=request.text,

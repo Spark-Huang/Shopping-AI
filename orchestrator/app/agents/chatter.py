@@ -186,7 +186,14 @@ class ChatterAgent:
             f"{recent_context}"
         )
 
-        system_prompt = self.config.chatter_prompt + language_instruction(language)
+        system_prompt = (
+            "You are a Guizhou goods and services shopping adviser. Help users "
+            "choose both goods (such as foods, teas and spirits, and handicrafts) "
+            "and services (including scenic-area tickets and other cultural "
+            "travel offerings). "
+            + self.config.chatter_prompt
+            + language_instruction(language)
+        )
         # Guizhou-dialect mode (stylistic): flavour the reply with common
         # local expressions while keeping the grounding rules intact.
         if getattr(state, "dialect", False):

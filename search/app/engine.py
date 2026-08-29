@@ -141,6 +141,8 @@ class Retriever:
         ]
         if successful:
             chunks, vectors, metadata = zip(*successful)
+            for product in metadata:
+                product["price"] = float(product.get("price") or 0)
             self.text_db.add_embeddings(
                 texts=list(chunks), embeddings=list(vectors), metadatas=list(metadata)
             )

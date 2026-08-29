@@ -36,7 +36,7 @@ interface GuizhouPageProps {
 
 type LoadState = "loading" | "ready" | "error";
 
-type FilterKey = "all" | "ethnic-wear" | "craft" | "food" | "drink";
+type FilterKey = "all" | "ethnic-wear" | "craft" | "food" | "drink" | "ticket";
 
 export const FILTER_SUBCATEGORIES: Record<
   Exclude<FilterKey, "all">,
@@ -65,6 +65,7 @@ export const FILTER_SUBCATEGORIES: Record<
     "凤冈锌硒茶",
     "普安红茶",
   ],
+  ticket: ["景点门票"],
 };
 
 function productMatchesFilter(
@@ -82,6 +83,7 @@ const FILTERS: { key: FilterKey; tourKey: string }[] = [
   { key: "craft", tourKey: "silver" },
   { key: "food", tourKey: "food" },
   { key: "drink", tourKey: "tea" },
+  { key: "ticket", tourKey: "overview" },
 ];
 
 /** Carousel auto-scroll cadence (ms). */
@@ -108,6 +110,7 @@ function pickTheme(filter: FilterKey): string {
   if (filter === "craft") return "传统工艺文创";
   if (filter === "food") return "酸辣风味美食";
   if (filter === "drink") return "高山云雾茶酒";
+  if (filter === "ticket") return "黔山文旅门票";
   return AI_THEMES[Math.floor(Math.random() * AI_THEMES.length)];
 }
 
