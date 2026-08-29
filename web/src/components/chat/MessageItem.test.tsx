@@ -1,6 +1,12 @@
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import ChatMessage from "./MessageItem";
 import "../../i18n";
 
@@ -8,7 +14,42 @@ vi.mock("react-toastify", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+afterEach(cleanup);
+
 describe("ChatMessage marketing interactions", () => {
+  it("renders product cards when images are empty or fail to load", () => {
+    render(
+      <ChatMessage
+        role="image_row"
+        content={[
+          {
+            productUrl: "",
+            productName: "Empty Image Wine",
+            price: 128,
+          },
+          {
+            productUrl: "/images/broken.jpg",
+            productName: "Broken Image Wine",
+            price: 168,
+          },
+        ]}
+        productName=""
+        onAddToCart={vi.fn()}
+      />
+    );
+
+    expect(screen.getAllByText("Empty Image Wine").length).toBeGreaterThan(0);
+    expect(screen.getByText("128.00")).toBeTruthy();
+
+    fireEvent.error(screen.getByAltText("Broken Image Wine"));
+
+    expect(screen.getAllByText("Broken Image Wine").length).toBeGreaterThan(0);
+    expect(screen.getByText("168.00")).toBeTruthy();
+    expect(
+      screen.getAllByRole("button", { name: /add to cart/i })
+    ).toHaveLength(2);
+  });
+
   it("does not mark ordinary budget mentions as refusals", () => {
     render(
       <ChatMessage

@@ -3,6 +3,7 @@
  */
 
 import React, { useState } from "react";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
 import ShareIcon from "@mui/icons-material/Share";
@@ -33,6 +34,28 @@ const toDetailProduct = (image: ImageContent): CatalogProduct => ({
   verifiedAt: "2026-08-29",
   imageType: "illustration",
 });
+
+const ProductImage = ({ src, name }: { src?: string; name: string }) => {
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) {
+    return (
+      <div className="messages__item--image-placeholder" aria-hidden="true">
+        <Inventory2OutlinedIcon />
+        <span>{name}</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      className="messages__item--image-img-rowitem"
+      src={src}
+      alt={name}
+      onError={() => setFailed(true)}
+    />
+  );
+};
 
 let catalogPromise: Promise<CatalogProduct[]> | null = null;
 const loadCatalog = () => {
@@ -260,10 +283,10 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
                   name: image.productName,
                 })}
               >
-                <img
-                  className="messages__item--image-img-rowitem"
+                <ProductImage
+                  key={image.productUrl || `${image.productName}-${index}`}
                   src={image.productUrl}
-                  alt={image.productName}
+                  name={image.productName}
                 />
               </button>
               <div className="messages__item--image-box">
