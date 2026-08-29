@@ -7,6 +7,7 @@
  * future routes (/me, /me/orders, /me/favorites) when a router is added.
  */
 
+import { proxiedImage } from "../../lib/imgUrl";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
@@ -245,7 +246,7 @@ const MePage: React.FC<MePageProps> = ({
           <div className="favorites-list">
             {favorites.map((product) => (
               <article className="favorites-item" key={product.productName}>
-                <img src={product.productUrl} alt={product.productName} />
+                <img src={proxiedImage(product.productUrl)} alt={product.productName} />
                 <div>
                   <h5>{product.productName}</h5>
                   {product.price != null && (
