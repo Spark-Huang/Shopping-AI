@@ -130,6 +130,27 @@ class RetrieverAgent(QueryFilterMixin):
             ]
         return broadened_entities, available_categories, max(k, 6)
 
+    def _query_search(
+        self,
+        entities: List[str],
+        categories: List[str],
+        filters: Dict[str, float],
+        k: int,
+        image: str,
+    ) -> Dict[str, Any]:
+        endpoint = "/query/image" if image else "/query/text"
+        payload: Dict[str, Any] = {
+            "text": entities,
+            "categories": categories,
+            "filters": filters,
+            "k": k,
+        }
+        if image:
+            payload["image_base64"] = image
+        response = self.http_session.post(f"{self.search_url}{endpoint}", json=payload)
+        response.raise_for_status()
+        return response.json()
+
     async def invoke(
         self,
         state: State,
@@ -165,52 +186,49 @@ class RetrieverAgent(QueryFilterMixin):
             state.context = f"{state.context}\n{state.response}"
             return state
         
+        has_budget = "max_price" in filters
+        relaxed_filters = {
+            name: value for name, value in filters.items() if name != "max_price"
+        }
+        fallback_k = min(3, k) if k >= 3 else 3
         cache_key = self._cache_key(entities, categories, filters, image, k)
+        relaxed_cache_key = self._cache_key(
+            entities, categories, relaxed_filters, image, fallback_k
+        )
         cached_results = self._cached_results(cache_key, time.monotonic())
+        cached_relaxed_results = (
+            self._cached_results(relaxed_cache_key, time.monotonic())
+            if has_budget else None
+        )
         state.timings["retriever_cache_hit"] = 0.0 if cached_results else 1.0
-        if cached_results:
+        relaxed_results: Dict[str, Any] | None = None
+        if cached_results and cached_relaxed_results:
+            results = cached_results
+            relaxed_results = cached_relaxed_results
+        elif cached_results:
             results = cached_results
         else:
-            # Query the search service.
             start = time.monotonic()
             try:
-                if image:
-                    logging.info(
-                        "RetrieverAgent.invoke() | /query/image -- getting response.\n"
-                        f"\t| entities: {entities}\n"
-                        f"\t| categories: {categories}\n"
-                        f"\t| filters: {filters}"
-                    )
-                    response = self.http_session.post(
-                        f"{self.search_url}/query/image",
-                        json={
-                            "text": entities,
-                            "image_base64": image,
-                            "categories": categories,
-                            "filters": filters,
-                            "k": k
-                        }
-                    )
-                else:
-                    logging.info(
-                        "RetrieverAgent.invoke() | /query/text -- getting response\n"
-                        f"\t| query: {entities}\n"
-                        f"\t| categories: {categories}\n"
-                        f"\t| filters: {filters}"
-                    )
-                    response = self.http_session.post(
-                        f"{self.search_url}/query/text",
-                        json={
-                            "text": entities,
-                            "categories": categories,
-                            "filters": filters,
-                            "k": k
-                        }
-                    )
-
-                response.raise_for_status()
-                results = response.json()
+                logging.info(
+                    "RetrieverAgent.invoke() | querying search service\n"
+                    f"\t| query: {entities}\n"
+                    f"\t| categories: {categories}\n"
+                    f"\t| filters: {filters}"
+                )
+                results = self._query_search(entities, categories, filters, k, image)
                 self._store_results(cache_key, time.monotonic(), results)
+                if has_budget and not results.get("texts"):
+                    logging.info(
+                        "RetrieverAgent.invoke() | price-filtered search was empty; "
+                        "retrying the same semantic query without price limits."
+                    )
+                    relaxed_results = self._query_search(
+                        entities, categories, relaxed_filters, fallback_k, image
+                    )
+                    self._store_results(
+                        relaxed_cache_key, time.monotonic(), relaxed_results
+                    )
 
             except requests.exceptions.RequestException as e:
                 if verbose:
@@ -221,6 +239,49 @@ class RetrieverAgent(QueryFilterMixin):
 
         start = time.monotonic()
         try:
+            if relaxed_results is not None and relaxed_results.get("texts"):
+                results = relaxed_results
+                budget = float(filters["max_price"])
+                currency = str(filters.get("currency") or "CNY")
+                products = []
+                retrieved_dict = {}
+                urls = results.get("urls") or []
+                prices = results.get("prices") or []
+                ratings = results.get("ratings") or []
+                currencies = results.get("currencies") or []
+                for idx, (text, name, img) in enumerate(
+                    zip(results["texts"], results["names"], results["images"])
+                ):
+                    price = prices[idx] if idx < len(prices) else None
+                    currency = currencies[idx] if idx < len(currencies) else currency
+                    if price is None:
+                        continue
+                    delta = float(price) - budget
+                    product_text = (
+                        f"{text}\nPRICE: {price:.2f} {currency}\n"
+                        f"OVER BUDGET: {delta:.2f} {currency}"
+                    )
+                    products.append(product_text)
+                    entry: Dict[str, Any] = {
+                        "image": img,
+                        "price": price,
+                        "currency": currency,
+                        "over_budget": delta,
+                    }
+                    url = urls[idx] if idx < len(urls) else None
+                    if url:
+                        entry["url"] = url
+                    retrieved_dict[name] = entry
+                if retrieved_dict:
+                    state.response = (
+                        f"There are no perfect matches within the {budget:.2f} "
+                        f"{currency} budget. The closest matches are:\n"
+                        + "\n".join(products)
+                    )
+                    state.retrieved = retrieved_dict
+                    state.context = f"{state.context}\n{state.response}"
+                    return state
+
             if results["texts"]:
                 products = []
                 retrieved_dict = {}

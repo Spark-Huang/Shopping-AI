@@ -348,6 +348,7 @@ def _install_session_post(
     payload: Dict[str, Any] | None = None,
     *,
     raise_exc: Exception | None = None,
+    fallback_payload: Dict[str, Any] | None = None,
 ):
     """Stub ``requests.Session.post`` used inside RetrieverAgent.invoke."""
     captured: Dict[str, Any] = {}
@@ -358,9 +359,12 @@ def _install_session_post(
 
         def post(self, url: str, json: Dict[str, Any]):
             captured["url"] = url
+            captured.setdefault("jsons", []).append(json)
             captured["json"] = json
             if raise_exc is not None:
                 raise raise_exc
+            if len(captured["jsons"]) == 2 and fallback_payload is not None:
+                return _FakeCatalogResponse(fallback_payload)
             return _FakeCatalogResponse(payload or {})
 
     monkeypatch.setattr(retriever_agent, "http_session", _FakeSession())
@@ -405,8 +409,53 @@ class TestRetrieverInvoke:
             "food",
             "drink",
         ]
-        assert captured["json"]["filters"] == {"max_price": 100.0}
-        assert captured["json"]["k"] == 6
+        assert captured["jsons"][0]["filters"] == {"max_price": 100.0}
+        assert captured["jsons"][1]["filters"] == {}
+        assert captured["jsons"][0]["k"] == 6
+        assert captured["jsons"][1]["k"] == 3
+
+    async def test_empty_price_filter_falls_back_to_semantic_over_budget_matches(
+        self,
+        retriever_agent: RetrieverAgent,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _stub_extraction_response(
+            retriever_agent,
+            {
+                "search_entities": ["贵州伴手礼"],
+                "category_one": "food",
+                "category_two": "craft",
+                "category_three": "drink",
+                "max_price": 100,
+            },
+        )
+        captured = _install_session_post(
+            monkeypatch,
+            retriever_agent,
+            payload={"texts": [], "names": [], "images": []},
+            fallback_payload={
+                "texts": [
+                    "贵州特产伴手礼 | gift | food",
+                    "贵州茶礼盒 | tea gift | drink",
+                ],
+                "names": ["贵州特产伴手礼", "贵州茶礼盒"],
+                "images": ["gift.jpg", "tea.jpg"],
+                "prices": [138.0, 188.0],
+                "currencies": ["CNY", "CNY"],
+            },
+        )
+
+        state = State(user_id=1, query="预算100元贵州伴手礼")
+        out = await retriever_agent.invoke(state, verbose=False)
+
+        assert captured["jsons"][1]["filters"] == {}
+        assert "no perfect matches within the 100.00 CNY budget" in out.response
+        assert "贵州特产伴手礼" in out.response
+        assert "PRICE: 138.00 CNY" in out.response
+        assert "OVER BUDGET: 38.00 CNY" in out.response
+        assert "OVER BUDGET: 88.00 CNY" in out.response
+        assert out.retrieved["贵州特产伴手礼"]["over_budget"] == 38.0
+        assert "shampoo" not in out.response.casefold()
 
     @pytest.mark.parametrize(
         ("query", "arguments", "expected"),

@@ -112,13 +112,26 @@ class ChatterAgent:
                 continue
             price = details.get("price")
             currency = details.get("currency")
+            over_budget = details.get("over_budget")
             if price is not None and currency:
-                lines.append(f"- {name}: {currency_symbol(currency)}{float(price):.2f} ({currency})")
+                line = f"- {name}: {currency_symbol(currency)}{float(price):.2f} ({currency})"
+                if over_budget is not None:
+                    line += f", over budget by {currency_symbol(currency)}{float(over_budget):.2f}"
+                lines.append(line)
             elif price is not None:
                 lines.append(f"- {name}: {float(price):.2f} (currency unavailable)")
             else:
                 lines.append(f"- {name}")
         return "\n".join(lines)
+
+    @staticmethod
+    def _format_fallback_rule() -> str:
+        return (
+            "If that catalog is marked as an over-budget fallback, say there is no "
+            "perfect match within the user's budget, present only those fallback "
+            "products with their price and over-budget amount, and never substitute "
+            "a different product type."
+        )
 
     @classmethod
     def _describe_preceding_agent(cls, state: State) -> str:
@@ -168,6 +181,7 @@ class ChatterAgent:
             f"RECENT ORDERS (authoritative, newest first, up to 5):\n{orders_block}\n\n"
             f"AVAILABLE CATALOG (fresh retrieval for this turn; the only NEW products you may introduce):\n"
             f"{catalog_block}\n\n"
+            f"{self._format_fallback_rule()}\n\n"
             f"RECENT DISCUSSION (reference only; paraphrased past turns, NOT authoritative for cart state):\n"
             f"{recent_context}"
         )

@@ -138,6 +138,34 @@ class TestFormatAvailableCatalog:
         assert "- Silk Dress" in out
         assert "- Hiking Boot" in out
 
+    def test_over_budget_candidates_include_delta(self) -> None:
+        state = State(
+            user_id=1,
+            query="预算100元贵州伴手礼",
+            retrieved={
+                "贵州特产伴手礼": {
+                    "image": "gift.jpg",
+                    "price": 138.0,
+                    "currency": "CNY",
+                    "over_budget": 38.0,
+                }
+            },
+        )
+
+        out = ChatterAgent._format_available_catalog(state)
+
+        assert "- 贵州特产伴手礼: ¥138.00 (CNY), over budget by ¥38.00" in out
+
+    def test_catalog_rule_targets_over_budget_fallback(self) -> None:
+        prompt = (
+            "If that catalog is marked as an over-budget fallback, say there is no "
+            "perfect match within the user's budget, present only those fallback "
+            "products with their price and over-budget amount, and never substitute "
+            "a different product type."
+        )
+
+        assert prompt in ChatterAgent._format_fallback_rule()
+
 
 class TestDescribePrecedingAgent:
     @pytest.mark.parametrize(
