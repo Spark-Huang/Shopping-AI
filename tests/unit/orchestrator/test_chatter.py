@@ -56,8 +56,8 @@ class TestFormatCart:
 
         rendered = ChatterAgent._format_cart(state)
 
-        assert "- 2 x Silk Dress @ $49.99" in rendered
-        assert "- 1 x Leather Bag @ $199.00" in rendered
+        assert "- 2 x Silk Dress @ ¥49.99" in rendered
+        assert "- 1 x Leather Bag @ ¥199.00" in rendered
 
     def test_renders_line_without_price_when_missing(self) -> None:
         state = State(
@@ -100,7 +100,7 @@ class TestFormatRecentOrders:
 
         rendered = ChatterAgent._format_recent_orders(state)
 
-        assert rendered.splitlines()[0] == "- Newest @ $12.50 on 2026-08-26"
+        assert rendered.splitlines()[0] == "- Newest @ ¥12.50 on 2026-08-26"
         assert len(rendered.splitlines()) == 5
 
     def test_orders_render_gracefully_when_price_is_invalid(self) -> None:
@@ -223,12 +223,12 @@ class TestLanguageInstruction:
     def test_zh_instruction_pinned_to_chinese(self) -> None:
         instruction = ChatterAgent._language_instruction("zh")
         assert "Chinese" in instruction
-        assert "Always render prices as $X.XX (USD)" in instruction
+        assert "always render them as ¥X.XX" in instruction
 
     def test_en_instruction_pinned_to_english(self) -> None:
         instruction = ChatterAgent._language_instruction("en")
         assert "English" in instruction
-        assert "Always render prices as $X.XX (USD)" in instruction
+        assert "CNY ¥X.XX" in instruction
 
 
 class TestChatterGroundingPrompt:
@@ -237,7 +237,7 @@ class TestChatterGroundingPrompt:
 
         assert "REAL UI CAPABILITIES" in prompt
         assert "external merchant link" in prompt
-        assert "no in-site checkout or payment button" in prompt
+        assert "check out selected items" in prompt
 
     def test_prompt_contains_budget_awareness_rule(self, chatter_agent: ChatterAgent) -> None:
         assert "BUDGET AWARENESS" in chatter_agent.config.chatter_prompt

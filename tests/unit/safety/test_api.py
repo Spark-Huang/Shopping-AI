@@ -105,7 +105,7 @@ class TestSafetyEndpoints:
         assert body["response"][0]["content"] == "safe query"
 
         calls = safety_app._test_recorded["calls"]
-        assert calls[-1]["options"] == {"safety": ["input"]}
+        assert calls[-1]["options"] == {"rails": ["input"]}
 
     def test_output_check_uses_output_safety(
         self, safety_app, client: TestClient
@@ -117,7 +117,7 @@ class TestSafetyEndpoints:
         assert response.status_code == 200
 
         calls = safety_app._test_recorded["calls"]
-        assert calls[-1]["options"] == {"safety": ["output"]}
+        assert calls[-1]["options"] == {"rails": ["output"]}
 
     def test_input_timing_includes_timings_field(
         self, safety_app, client: TestClient

@@ -228,8 +228,8 @@ class TestRepoPromptContracts:
         routing_prompt = config["routing_prompt"]
 
         assert "UNDERSPECIFIED SHOPPING CONSTRAINTS -> chatter" in routing_prompt
-        assert "show me anything under $100" in routing_prompt
-        assert "show me dresses under $100" in routing_prompt
+        assert "show me anything under ¥100" in routing_prompt
+        assert "show me Guizhou tea under ¥100" in routing_prompt
         assert "IMAGE ATTACHED is yes" in routing_prompt
 
     def test_chatter_asks_clarification_before_no_results(
