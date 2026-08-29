@@ -363,6 +363,66 @@ class TestCartFlows:
         response = client.post("/user/999/cart/clear")
         assert response.status_code == 404
 
+    def test_checkout_creates_orders_and_clears_lines(
+        self, client: TestClient
+    ) -> None:
+        client.post(
+            "/user/1/cart/add",
+            json={"item": "Silk Dress", "amount": 2, "price": 49.99},
+        )
+        client.post(
+            "/user/1/cart/add",
+            json={"item": "Lao Gan Ma Chili Crisp", "amount": 1, "price": 9},
+        )
+        # An untouched line must survive the partial checkout.
+        client.post(
+            "/user/1/cart/add",
+            json={"item": "Duyun Maojian Green Tea", "amount": 1, "price": 45},
+        )
+
+        response = client.post(
+            "/user/1/checkout",
+            json={
+                "items": [
+                    {"item": "Silk Dress", "price": 49.99},
+                    {"item": "Lao Gan Ma Chili Crisp", "price": 9},
+                ]
+            },
+        )
+        assert response.status_code == 200
+        returned_orders = response.json()["orders"]
+        assert [order["item"] for order in returned_orders] == [
+            "Silk Dress",
+            "Lao Gan Ma Chili Crisp",
+        ]
+
+        # Order price is the line total (unit price x amount).
+        orders = client.get("/user/1/orders").json()["orders"]
+        by_name = {order["item"]: order for order in orders}
+        assert by_name["Silk Dress"]["price"] == pytest.approx(99.98)
+        assert by_name["Silk Dress"]["note"] == "Checked out x2"
+        assert by_name["Lao Gan Ma Chili Crisp"]["price"] == pytest.approx(9)
+
+        # Settled lines are gone; the untouched one remains.
+        cart = client.get("/user/1/cart").json()["cart"]
+        assert [line["item"] for line in cart] == ["Duyun Maojian Green Tea"]
+
+    def test_checkout_unknown_item_returns_404(self, client: TestClient) -> None:
+        client.post(
+            "/user/1/cart/add",
+            json={"item": "Silk Dress", "amount": 1, "price": 49.99},
+        )
+        response = client.post(
+            "/user/1/checkout",
+            json={"items": [{"item": "Ghost"}]},
+        )
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Item not in cart: Ghost"
+
+    def test_checkout_empty_items_rejected(self, client: TestClient) -> None:
+        response = client.post("/user/1/checkout", json={"items": []})
+        assert response.status_code == 422
+
     def test_carts_are_partitioned_per_user(self, client: TestClient) -> None:
         client.post(
             "/user/1/cart/add",

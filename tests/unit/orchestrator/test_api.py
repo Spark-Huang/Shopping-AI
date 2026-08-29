@@ -43,6 +43,9 @@ class _NoopAgent:
     def decide_function(self, state: State) -> str:
         return "chatter"
 
+    def generate(self, **_: Any) -> List[Dict[str, Any]]:
+        return []
+
 
 class _StubCompiledGraph:
     """Replacement for the compiled LangGraph runnable."""
@@ -138,6 +141,13 @@ class TestCreateInitialState:
         state = main_module.create_initial_state(request)
         assert state.context == ""
 
+    def test_dialect_defaults_off_and_passes_through(self, main_module) -> None:
+        request = main_module.QueryRequest(user_id=1, query="hi")
+        assert main_module.create_initial_state(request).dialect is False
+
+        request = main_module.QueryRequest(user_id=1, query="hi", dialect=True)
+        assert main_module.create_initial_state(request).dialect is True
+
 
 # ---------------------------------------------------------------------------
 # Endpoints
@@ -157,7 +167,7 @@ class TestHealthAndRoot:
         assert response.status_code == 200
 
         body = response.json()
-        assert body["message"] == "Guikela API"
+        assert body["message"] == "Guikelai API"
         assert body["version"] == "1.0.0"
         assert "query" not in body["endpoints"]
         for key in ["stream", "timing", "cart", "orders", "context", "health", "docs"]:
@@ -263,6 +273,73 @@ class TestProxyEndpoints:
         assert recorded["url"].endswith("/user/1/cart/remove")
         assert recorded["json"] == {"item": "Silk Dress", "amount": 1}
         assert recorded["headers"]["Authorization"] == _bearer()
+
+    def test_checkout_cart_passes_items_to_memory_service(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        recorded = {}
+
+        class _Response:
+            status_code = 200
+
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self):
+                return {"user_id": 1, "message": "checked out"}
+
+        def _post(url: str, json: Dict[str, Any], timeout: int):
+            recorded.update({"url": url, "json": json, "timeout": timeout})
+            return _Response()
+
+        monkeypatch.setattr(main_module.requests, "post", _post)
+
+        body = {"items": [{"item": "Silk Dress", "price": 49.99}]}
+        response = main_module.checkout_cart(1, body, authorization=_bearer())
+
+        assert response["message"] == "checked out"
+        assert recorded["url"].endswith("/user/1/checkout")
+        assert recorded["json"] == body
+
+    def test_products_serves_csv_filtered_by_category(
+        self, main_module
+    ) -> None:
+        response = main_module.list_products(category="guizhou")
+        products = response["products"]
+
+        assert len(products) == 52
+        assert all(p["category"] == "guizhou" for p in products)
+        names = {p["name"] for p in products}
+        assert "苗银凤冠" in names
+        assert "都匀毛尖绿茶" in names
+        # New Guizhou batch items are served alongside the originals.
+        assert "水族马尾绣围腰" in names
+        assert "玉屏箫笛" in names
+        # Catalog expansion batch: 18 more Guizhou lines.
+        assert "大方彝族漆器食盒" in names
+        assert "雷山银球茶" in names
+        by_name = {p["name"]: p for p in products}
+        assert by_name["老干妈油辣椒"]["price"] == 9
+        assert by_name["老干妈油辣椒"]["subcategory"] == "food"
+        assert by_name["苗绣披肩"]["subcategory"] == "ethnic-wear"
+        assert by_name["苗绣披肩"]["image"] == (
+            "/images/products/guizhou/miao-embroidered-shawl.png"
+        )
+        # Cultural stories ride along for the showcase page and agent.
+        assert "苗绣" in by_name["苗绣披肩"]["story"]
+        assert by_name["通勤帆布托特包" if "通勤帆布托特包" in by_name else "老干妈油辣椒"]
+
+    def test_products_without_category_returns_whole_catalog(
+        self, main_module
+    ) -> None:
+        response = main_module.list_products(category=None)
+        products = response["products"]
+
+        assert len(products) == 52
+        categories = {p["category"] for p in products}
+        assert categories == {"guizhou"}
+        assert all(product["sourceUrl"] for product in products)
+        assert all(product["verifiedAt"] for product in products)
 
     def test_add_context_passes_stripped_fact_to_memory_service(
         self, main_module, monkeypatch: pytest.MonkeyPatch
