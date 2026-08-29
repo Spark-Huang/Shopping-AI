@@ -183,6 +183,27 @@
   filter: saturate(0.86);
 }
 
+/* Assistant avatar: round brand logo mark (shield emoji for says-no) */
+.messages__avatar {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  font-size: 16px;
+  line-height: 1;
+  box-shadow: 0 0 0 1px var(--glass-border);
+}
+
+.messages__avatar--says-no {
+  background: rgba(29, 78, 216, 0.1);
+}
+
+/* Clickable example-question chips under the welcome bubble
+   (PM item 5): pill buttons that send the question on click. */
 .messages__examples {
   display: flex;
   flex-wrap: wrap;
@@ -390,6 +411,15 @@
   line-height: 0;
 }
 
+/* The tile is a <button> that opens the product detail modal. */
+button.messages__item--image-link {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
 .messages__item--image-name {
   font-size: 0.85rem;
   font-weight: 500;
@@ -470,11 +500,11 @@
   cursor: pointer;
 }
 
+/* FOOTER: unified pill composer pinned to bottom */
 .chatbox__footer {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
   background: var(--surface-tabbar);
   backdrop-filter: blur(38px) saturate(165%);
@@ -485,29 +515,163 @@
   flex-shrink: 0;
 }
 
-.chatbox__footer input {
+/* Row holding the composer pill and the side toolbar */
+.chatbox__footer-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Uploaded-image preview chip above the composer */
+.chatbox__preview {
+  position: relative;
+  display: inline-flex;
+  align-self: flex-start;
+}
+
+.chatbox__preview img {
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--glass-border);
+  display: block;
+}
+
+.chatbox__preview-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.chatbox__preview-clear:hover {
+  color: #dc2626;
+}
+
+/* Composer pill: light-gray capsule, borderless transparent input inside */
+.chatbox__composer {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 9999px;
+  background: var(--surface-1);
+  transition: border-color 0.25s var(--ease-out-expo),
+    box-shadow 0.25s var(--ease-out-expo);
+}
+
+/* Brand-color glow around the pill while typing */
+.chatbox__composer:focus-within {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+}
+
+.chatbox__composer-input {
   flex: 1 1 auto;
   min-width: 0;
-  border: 1px solid var(--hairline);
-  background: rgba(246, 252, 255, 0.34);
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  padding: 8px 0;
   text-align: left;
   font-size: 0.9rem;
   color: var(--text-primary);
   backdrop-filter: blur(24px) saturate(145%);
   -webkit-backdrop-filter: blur(24px) saturate(145%);
   outline: none;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: color 0.2s ease;
 }
 
-.chatbox__footer input:focus {
-  border-color: rgba(29, 29, 31, 0.28);
-  background: rgba(250, 253, 255, 0.74);
+.chatbox__composer-input::placeholder {
+  color: var(--text-secondary);
 }
 
-.chatbox__footer input::placeholder {
-  color: var(--text-tertiary);
+/* Round brand send button inside the pill */
+.chatbox__composer-send {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  color: #ffffff;
+  cursor: pointer;
+  transition: filter 0.2s var(--ease-spring), opacity 0.2s var(--ease-spring);
+}
+
+.chatbox__composer-send:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.chatbox__composer-send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Side toolbar: circular icon buttons outside the pill */
+.chatbox__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.chatbox__tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chatbox__tool:hover {
+  background: rgba(29, 78, 216, 0.08);
+  color: var(--brand-primary);
+}
+
+.chatbox__tool--upload {
+  color: var(--brand-primary);
+}
+
+/* Mobile: compact composer */
+@media (max-width: 480px) {
+  .chatbox__footer {
+    gap: 6px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .chatbox__composer {
+    padding-left: 12px;
+  }
+
+  .chatbox__composer-send {
+    width: 34px;
+    height: 34px;
+  }
+
+  .chatbox__tool {
+    width: 32px;
+    height: 32px;
+  }
 }
 
 .chatbox__send--footer {

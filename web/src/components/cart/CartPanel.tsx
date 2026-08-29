@@ -3,8 +3,10 @@
  *
  * - Shows item name, amount and unit price (when available) for the
  *   current session user.
- * - Renders as a regular in-flow page inside the Cart tab (the former
- *   fixed/collapsible side panel is gone — no Collapse button anymore).
+ * - Each line has a checkbox, a quantity stepper (+/-) and a delete button.
+ * - Select multiple lines and check them out in one go (records orders and
+ *   clears the settled lines from the cart).
+ * - Renders as a regular in-flow page inside the Cart tab.
  * - Friendly empty state when the cart has no items.
  * - Refreshes when a cart mutation is detected (via refreshSignal) and
  *   on mount. Data is persisted server-side, so it survives reloads.
@@ -18,12 +20,20 @@ import { useTranslation } from "react-i18next";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import ShareIcon from "@mui/icons-material/Share";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import "./cart.css";
-import { fetchCart, removeCartProduct } from "../../api/cartApi";
-import { markPurchased } from "../../api/ordersApi";
+import {
+  checkoutCart,
+  fetchCart,
+  removeCartProduct,
+  setCartQuantity,
+} from "../../api/cartApi";
 import { getOrCreateUserId } from "../../lib/identity";
 import { CartItemData } from "../../types/cart";
 import { shareText } from "../../lib/share";
+import { formatCny } from "../../lib/currency";
 
 const isHttpsUrl = (value: string): boolean => {
   try {
@@ -54,14 +64,23 @@ type LoadState = "loading" | "ready" | "error";
 const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onOrderChange }) => {
   const [items, setItems] = useState<CartItemData[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
-  const [markingPurchased, setMarkingPurchased] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState<Set<string>>(new Set());
+  const [checkingOut, setCheckingOut] = useState(false);
   const { t } = useTranslation();
 
   const refresh = useCallback(async () => {
     const userId = getOrCreateUserId();
     try {
       const data = await fetchCart(userId);
-      setItems(Array.isArray(data.cart) ? data.cart : []);
+      const cart = Array.isArray(data.cart) ? data.cart : [];
+      setItems(cart);
+      // Drop selections for lines that no longer exist.
+      setSelected((current) => {
+        const names = new Set(cart.map((it) => it.item));
+        const next = new Set([...current].filter((name) => names.has(name)));
+        return next;
+      });
       setLoadState("ready");
     } catch (error) {
       console.error("CartPanel: failed to load cart", error);
@@ -78,37 +97,106 @@ const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onO
   const totalPrice = items.reduce((sum, it) => sum + ((it.price || 0) * (it.amount || 0)), 0);
   const itemsWithoutPrice = items.filter(it => it.price == null).reduce((sum, it) => sum + (it.amount || 0), 0);
 
-  const handleMarkPurchased = async (item: typeof items[number]) => {
-    if (markingPurchased.has(item.item)) return;
-    setMarkingPurchased(current => new Set(current).add(item.item));
-    let orderRecorded = false;
+  const selectedItems = items.filter((it) => selected.has(it.item));
+  const selectedCount = selectedItems.reduce((sum, it) => sum + (it.amount || 0), 0);
+  const selectedTotal = selectedItems.reduce(
+    (sum, it) => sum + ((it.price || 0) * (it.amount || 0)),
+    0
+  );
+  const allSelected = items.length > 0 && selected.size === items.length;
+
+  const toggleSelected = (name: string) => {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelected(allSelected ? new Set() : new Set(items.map((it) => it.item)));
+  };
+
+  const markBusy = (name: string, on: boolean) => {
+    setBusy((current) => {
+      const next = new Set(current);
+      if (on) {
+        next.add(name);
+      } else {
+        next.delete(name);
+      }
+      return next;
+    });
+  };
+
+  const handleQuantityChange = async (item: CartItemData, delta: number) => {
+    const nextAmount = (item.amount || 0) + delta;
+    if (nextAmount < 1) return; // deletion goes through the delete button
+    if (nextAmount > 99) return;
+    markBusy(item.item, true);
     try {
-      await markPurchased(getOrCreateUserId(), {
-        item: item.item,
-        price: item.price ?? null,
-        note: "Marked from Cart",
-      });
-      orderRecorded = true;
+      await setCartQuantity(
+        getOrCreateUserId(),
+        item.item,
+        nextAmount,
+        item.price,
+        item.url ?? null
+      );
+      await refresh();
+    } catch (error) {
+      console.error("CartPanel: failed to update quantity", error);
+      toast.error(t("cart.updateFailed", { item: item.item }));
+    } finally {
+      markBusy(item.item, false);
+    }
+  };
+
+  const handleDelete = async (item: CartItemData) => {
+    markBusy(item.item, true);
+    try {
       await removeCartProduct(getOrCreateUserId(), item.item, item.amount);
-      toast.success(t("cart.movedToOrders"));
+      toast.success(t("cart.removed", { item: item.item }));
+      await refresh();
+    } catch (error) {
+      console.error("CartPanel: failed to remove item", error);
+      toast.error(t("cart.removeFailed", { item: item.item }));
+    } finally {
+      markBusy(item.item, false);
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (selectedItems.length === 0 || checkingOut) return;
+    setCheckingOut(true);
+    try {
+      await checkoutCart(
+        getOrCreateUserId(),
+        selectedItems.map((it) => ({ item: it.item, price: it.price }))
+      );
+      toast.success(
+        t("cart.checkoutSuccess", { count: selectedCount, total: selectedTotal.toFixed(2) })
+      );
+      setSelected(new Set());
+      await refresh();
       onOrderChange?.();
     } catch (error) {
-      console.error("CartPanel: failed to complete mark-purchased cart sync", error);
-      setMarkingPurchased(current => {
-        const next = new Set(current);
-        next.delete(item.item);
-        return next;
-      });
-      toast.error(t(orderRecorded ? "cart.syncFailed" : "me.orderFailed"));
+      console.error("CartPanel: checkout failed", error);
+      toast.error(t("cart.checkoutFailed"));
+    } finally {
+      setCheckingOut(false);
     }
   };
 
   const handleShareCart = async () => {
     const lines = items.map((item) => {
-      const price = item.price != null ? ` · $${(item.price * item.amount).toFixed(2)}` : "";
+      const price = item.price != null ? ` · ${formatCny(item.price * item.amount)}` : "";
       return `- ${item.item} × ${item.amount}${price}`;
     });
-    const text = `${t("cart.shareText")}\n${lines.join("\n")}\n${t("cart.total")}: $${totalPrice.toFixed(2)}\n${t("cart.shareSlogan")}\n${window.location.origin}`;
+    const text = `${t("cart.shareText")}\n${lines.join("\n")}\n${t("cart.total")}: ${formatCny(totalPrice)}\n${t("cart.shareSlogan")}\n${window.location.origin}`;
     try {
       if (navigator.share) {
         await navigator.share({ text });
@@ -160,35 +248,90 @@ const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onO
           <div className="cart-page__empty">{t("cart.empty")}</div>
         )}
         {loadState === "ready" &&
-          items.map((it) => (
-            <div className="cart-page__item" key={it.item}>
-              <span className="cart-page__item-name">{it.item}</span>
-              <span className="cart-page__item-amount">×{it.amount}</span>
-              <span className="cart-page__item-price">
-                {it.price != null ? `$${(it.price * it.amount).toFixed(2)}` : ""}
-              </span>
-              {it.url && isHttpsUrl(it.url) && (
-                <a href={it.url} target="_blank" rel="noopener noreferrer" className="cart-page__item-link">
-                  <span className="sr-only">Opens on the product site</span>
-                  <OpenInNewIcon fontSize="small" />
-                </a>
-              )}
+          items.map((it) => {
+            const isSelected = selected.has(it.item);
+            return (
+              <div className="cart-page__item" key={it.item}>
+                <button
+                  type="button"
+                  className="cart-page__item-check"
+                  aria-pressed={isSelected}
+                  aria-label={t("cart.toggleSelect", { item: it.item })}
+                  disabled={busy.has(it.item)}
+                  onClick={() => toggleSelected(it.item)}
+                >
+                  {isSelected ? (
+                    <CheckBoxIcon fontSize="small" color="primary" />
+                  ) : (
+                    <CheckBoxOutlineBlankIcon fontSize="small" />
+                  )}
+                </button>
+                <span className="cart-page__item-name">{it.item}</span>
+                <span className="cart-page__qty">
+                  <button
+                    type="button"
+                    className="cart-page__qty-btn"
+                    disabled={busy.has(it.item) || (it.amount || 0) <= 1}
+                    aria-label={t("cart.decreaseQty", { item: it.item })}
+                    onClick={() => handleQuantityChange(it, -1)}
+                  >
+                    −
+                  </button>
+                  <span className="cart-page__qty-value">{it.amount}</span>
+                  <button
+                    type="button"
+                    className="cart-page__qty-btn"
+                    disabled={busy.has(it.item) || (it.amount || 0) >= 99}
+                    aria-label={t("cart.increaseQty", { item: it.item })}
+                    onClick={() => handleQuantityChange(it, 1)}
+                  >
+                    +
+                  </button>
+                </span>
+                <span className="cart-page__item-price">
+                  {it.price != null ? formatCny(it.price * it.amount) : ""}
+                </span>
+                {it.url && isHttpsUrl(it.url) && (
+                  <a href={it.url} target="_blank" rel="noopener noreferrer" className="cart-page__item-link">
+                    <span className="sr-only">Opens on the product site</span>
+                    <OpenInNewIcon fontSize="small" />
+                  </a>
+                )}
+                <button
+                  type="button"
+                  className="cart-page__item-delete"
+                  disabled={busy.has(it.item)}
+                  aria-label={t("cart.delete", { item: it.item })}
+                  onClick={() => handleDelete(it)}
+                >
+                  <DeleteOutlineIcon fontSize="small" />
+                </button>
+              </div>
+            );
+          })}
+        {loadState === "ready" && items.length > 0 && (
+          <div className="cart-page__total">
+            <div className="cart-page__select-all">
               <button
                 type="button"
-                className="cart-page__item-action"
-                disabled={markingPurchased.has(it.item)}
-                onClick={() => handleMarkPurchased(it)}
+                className="cart-page__item-check"
+                aria-pressed={allSelected}
+                onClick={toggleSelectAll}
               >
-                {markingPurchased.has(it.item)
-                  ? t("me.markedPurchased")
-                  : t("me.markPurchased")}
+                {allSelected ? (
+                  <CheckBoxIcon fontSize="small" color="primary" />
+                ) : (
+                  <CheckBoxOutlineBlankIcon fontSize="small" />
+                )}
               </button>
+              <span>{t("cart.selectAll")}</span>
             </div>
-          ))}
-        {loadState === "ready" && totalItems > 0 && (
-          <div className="cart-page__total">
             <div className="cart-page__total-row">
-              <span>{t("cart.total")}: ${totalPrice.toFixed(2)}</span>
+              <span>
+                {selected.size > 0
+                  ? t("cart.selectedTotal", { count: selectedCount, total: selectedTotal.toFixed(2) })
+                  : `${t("cart.total")}: ${formatCny(totalPrice)}`}
+              </span>
               {itemsWithoutPrice > 0 && (
                 <span className="cart-page__no-price">
                   (+ {itemsWithoutPrice} {t("cart.noPrice")})
@@ -199,6 +342,18 @@ const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onO
                 {t("cart.shareList")}
               </button>
             </div>
+            <button
+              type="button"
+              className="cart-page__checkout"
+              disabled={selected.size === 0 || checkingOut}
+              onClick={handleCheckout}
+            >
+              {checkingOut
+                ? t("cart.checkingOut")
+                : selected.size > 0
+                  ? t("cart.checkoutSelected", { count: selectedCount, total: selectedTotal.toFixed(2) })
+                  : t("cart.checkout")}
+            </button>
           </div>
         )}
       </div>

@@ -16,9 +16,10 @@ import Badge from "@mui/material/Badge";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import TravelExploreOutlinedIcon from "@mui/icons-material/TravelExploreOutlined";
 
-/** The three tabs of the app shell. */
-export type TabId = "messages" | "cart" | "me";
+/** The four tabs of the app shell. */
+export type TabId = "messages" | "discover" | "cart" | "me";
 
 interface BottomTabBarProps {
   /** Currently visible tab. */
@@ -47,6 +48,12 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
       label: t("tabs.messages"),
       icon: <ChatBubbleOutlineIcon />,
       testid: "tab-messages",
+    },
+    {
+      id: "discover",
+      label: t("tabs.discover"),
+      icon: <TravelExploreOutlinedIcon />,
+      testid: "tab-discover",
     },
     {
       id: "cart",

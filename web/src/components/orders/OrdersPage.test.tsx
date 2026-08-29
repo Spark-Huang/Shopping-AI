@@ -52,7 +52,7 @@ describe("OrdersPage budget comparison", () => {
     render(<OrdersPage refreshSignal={0} onBack={vi.fn()} />);
 
     expect(await screen.findByTestId("orders-budget")).toBeTruthy();
-    expect(screen.getByText("$19.99 over")).toBeTruthy();
+    expect(screen.getByText("CNY ¥19.99 over")).toBeTruthy();
     expect(screen.getByRole("progressbar")).toBeTruthy();
   });
 
@@ -86,7 +86,7 @@ describe("OrdersPage budget comparison", () => {
     render(<OrdersPage refreshSignal={0} onBack={vi.fn()} />);
 
     expect(
-      await screen.findByText("Budget $50.00 — spent $69.99")
+      await screen.findByText("Budget CNY ¥50.00 — spent ¥69.99")
     ).toBeTruthy();
     expect(screen.getByRole("progressbar").getAttribute("aria-valuemax")).toBe(
       "50"
