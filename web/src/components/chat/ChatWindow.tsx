@@ -17,21 +17,20 @@ import {
 } from "../../lib/identity";
 import { readFavorites, toggleFavorite } from "../../lib/favorites";
 import type { ImageContent } from "../../types/chat";
+import { addCartProduct } from "../../api/cartApi";
 import {
-  fetchHistory,
   createChatSession,
   deleteChatSession,
   fetchSessionMessages,
   listChatSessions,
+  type SessionMessage,
 } from "../../api/historyApi";
-import { addCartProduct } from "../../api/cartApi";
 import { useTranslation } from "react-i18next";
 import {
   convertToBase64,
   createImagePreview,
   validateImageFile,
 } from "./chatInput";
-import { splitHistoryIntoBubbles } from "./chatHistory";
 import { readChatStream } from "./ChatWindow.useStream";
 import { parseImagesPayload } from "../../lib/images";
 import { scheduleSession, sleep } from "./streamSession";
@@ -149,6 +148,29 @@ const Chatbox: React.FC<ChatboxProps> = ({
     }
   };
 
+  const sessionMessagesToChatMessages = (
+    sessionMessages: SessionMessage[]
+  ): ChatMessage[] =>
+    sessionMessages.flatMap<ChatMessage>((item) => {
+      const baseMessage = {
+        content: item.content,
+        productName: "",
+        isWelcome: false,
+        isHistory: true,
+      };
+      if (item.role !== "assistant" || !item.products) {
+        return [{ ...baseMessage, role: item.role }];
+      }
+      return [
+        { ...baseMessage, role: item.role },
+        {
+          ...baseMessage,
+          role: "image_row",
+          content: parseImagesPayload(item.products),
+        },
+      ];
+    });
+
   const loadSession = async (sessionId: number) => {
     if (isLoading) return;
     try {
@@ -158,25 +180,55 @@ const Chatbox: React.FC<ChatboxProps> = ({
       disarmResetConfirmation();
       setImage("");
       setPreviewImage("");
-      setMessages(
-        sessionMessages.flatMap<ChatMessage>((item) => {
-          const baseMessage = {
-            content: item.content,
-            productName: "",
-            isWelcome: false,
-            isHistory: true,
-          };
-          if (item.role !== "assistant" || !item.products) {
-            return [{ ...baseMessage, role: item.role }];
-          }
-          return [
-            { ...baseMessage, role: item.role },
-            { ...baseMessage, role: "image_row", content: parseImagesPayload(item.products) },
-          ];
-        })
-      );
+      setMessages(sessionMessagesToChatMessages(sessionMessages));
     } catch {
       toast.error(t("sessions.loadFailed"));
+    }
+  };
+
+  const loadInitialConversation = async () => {
+    try {
+      const sessions = await listChatSessions(getOrCreateUserId());
+      const latestSession = [...sessions].sort((first, second) => {
+        const firstTime = Date.parse(first.updated_at ?? first.created_at ?? "");
+        const secondTime = Date.parse(second.updated_at ?? second.created_at ?? "");
+        if (!Number.isNaN(firstTime) && !Number.isNaN(secondTime)) {
+          return secondTime - firstTime;
+        }
+        return 0;
+      })[0];
+      if (!latestSession) {
+        await showWelcome();
+        return;
+      }
+
+      const sessionMessages = await fetchSessionMessages(
+        getOrCreateUserId(),
+        latestSession.id
+      );
+      const lastAssistantIndex = [...sessionMessages]
+        .reverse()
+        .findIndex((item) => item.role === "assistant");
+      if (lastAssistantIndex === -1) {
+        await showWelcome();
+        return;
+      }
+      const assistantIndex = sessionMessages.length - 1 - lastAssistantIndex;
+      let userIndex = -1;
+      for (let index = assistantIndex - 1; index >= 0; index -= 1) {
+        if (sessionMessages[index].role === "user") {
+          userIndex = index;
+          break;
+        }
+      }
+      const startIndex = userIndex === -1 ? assistantIndex : userIndex;
+      setActiveSessionId(latestSession.id);
+      setMessages(
+        sessionMessagesToChatMessages(sessionMessages.slice(startIndex, assistantIndex + 1))
+      );
+    } catch (error) {
+      console.warn("Chatbox: latest conversation replay skipped", error);
+      await showWelcome();
     }
   };
 
@@ -400,31 +452,13 @@ const Chatbox: React.FC<ChatboxProps> = ({
    * Reset/replay entry point.
    *
    * Two call sites, two behaviours:
-   *  - mount (userInitiated=false): session replay (D3). If the server has a
-   *    conversation context for the stored user id, replay it as
-   *    History-badged bubbles and KEEP the id so follow-up messages continue
-   *    the same server-side context. Empty/failed lookup falls through to
-   *    the welcome flow.
+   *  - mount (userInitiated=false): show only the final user/assistant turn
+   *    from the latest session. Empty/failed lookup falls through to the
+   *    welcome flow.
    *  - Reset button (userInitiated=true): explicit fresh start — drop the
    *    persistent user id (next message mints a new user) and show the welcome.
    */
   const handleReset = async (userInitiated: boolean = false) => {
-    if (!userInitiated) {
-      try {
-        const history = await fetchHistory(getOrCreateUserId());
-        const bubbles = splitHistoryIntoBubbles(history.context || "");
-        if (bubbles.length > 0) {
-          for (const bubble of bubbles) {
-            addMessage("assistant", bubble, "", false, true);
-          }
-          return;
-        }
-      } catch (e) {
-        // Network/API failure or first-time user: fall through to welcome.
-        console.warn("Chatbox: history replay skipped", e);
-      }
-    }
-
     setMessages([]);
     setImage("");
     setPreviewImage("");
@@ -432,7 +466,9 @@ const Chatbox: React.FC<ChatboxProps> = ({
       clearUserIdentity();
     }
     setActiveSessionId(null);
-    await showWelcome();
+    if (userInitiated) {
+      await showWelcome();
+    }
   };
 
   useEffect(() => {
@@ -585,7 +621,7 @@ const Chatbox: React.FC<ChatboxProps> = ({
   useEffect(() => {
     if (!isOpen || initialConversationLoadedRef.current) return;
     initialConversationLoadedRef.current = true;
-    void handleReset();
+    void loadInitialConversation();
   }, [isOpen]);
 
   useEffect(

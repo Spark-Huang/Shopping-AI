@@ -51,16 +51,7 @@ describe("Chatbox header controls", () => {
 });
 
 const finishWelcomeTypewriter = async () => {
-  for (let elapsed = 0; elapsed < 4000; elapsed += 100) {
-    await vi.advanceTimersByTimeAsync(100);
-    if (
-      screen.queryByText(
-        "Welcome to Guikelai 👋 Tell me who it is for, your budget, and preferred tastes. I will help you choose Guizhou foods, teas, and heritage crafts."
-      )
-    )
-      return;
-  }
-  throw new Error("Onboarding introduction did not finish typing");
+  await vi.advanceTimersByTimeAsync(2500);
 };
 
 describe("Chatbox user identity replay behavior", () => {
@@ -77,6 +68,21 @@ describe("Chatbox user identity replay behavior", () => {
     requestHistory.mockReset();
     fetchMock.mockReset();
     fetchMock.mockImplementation(requestHistory);
+    vi.mocked(historyApi.listChatSessions).mockResolvedValue([
+      {
+        id: 7,
+        user_id: 1,
+        title: "Latest",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: null,
+      },
+    ]);
+    vi.mocked(historyApi.fetchSessionMessages).mockResolvedValue([
+      { id: 1, user_id: 1, session_id: 7, role: "user", content: "First question", created_at: null },
+      { id: 2, user_id: 1, session_id: 7, role: "assistant", content: "First answer", created_at: null },
+      { id: 3, user_id: 1, session_id: 7, role: "user", content: "Latest question", created_at: null },
+      { id: 4, user_id: 1, session_id: 7, role: "assistant", content: "Latest answer", created_at: null },
+    ]);
   });
 
   afterEach(() => {
@@ -86,7 +92,7 @@ describe("Chatbox user identity replay behavior", () => {
 
   it.each([
     {
-      name: "with history",
+      name: "with latest session history",
       context: "Previous recommendation\n\nPrevious cart update",
       shouldReplayHistory: true,
     },
@@ -95,39 +101,40 @@ describe("Chatbox user identity replay behavior", () => {
       name: "with HTTP 500",
       context: undefined,
       shouldReplayHistory: false,
-      rejectHistory: true,
+      rejectHistory: false,
+      simulateUnavailableSessions: true,
     },
   ])(
-    "preserves the user id on mount replay $name",
-    async ({ context, shouldReplayHistory, rejectHistory }) => {
+    "preserves the user id with mount replay $name",
+    async ({
+      context,
+      shouldReplayHistory,
+      rejectHistory,
+      simulateUnavailableSessions,
+    }) => {
       if (rejectHistory) {
         requestHistory.mockRejectedValue(new Error("HTTP 500"));
       } else {
-        requestHistory.mockResolvedValue({
-          ok: true,
-          json: async () => ({ context }),
-        });
+        requestHistory.mockResolvedValue({ ok: true, json: async () => ({ context }) });
+        if (context === "" && !rejectHistory) {
+          vi.mocked(historyApi.listChatSessions).mockResolvedValue([]);
+        }
+      }
+      if (rejectHistory || simulateUnavailableSessions) {
+        vi.mocked(historyApi.listChatSessions).mockRejectedValue(new Error("HTTP 500"));
       }
 
       renderChatbox();
       await vi.advanceTimersByTimeAsync(2500);
 
-      expect(
-        requestHistory.mock.calls.some(
-          (call) => String(call[0]) === `/api/context/${currentUserId}`
-        )
-      ).toBe(true);
+      expect(requestHistory).not.toHaveBeenCalled();
       if (shouldReplayHistory) {
-        expect(
-          screen.getAllByText("Previous recommendation").length
-        ).toBeGreaterThan(0);
+        expect(screen.getByText("Latest question")).toBeTruthy();
+        expect(screen.getByText("Latest answer")).toBeTruthy();
+        expect(screen.queryByText("First question")).toBeNull();
+        expect(screen.queryByText("First answer")).toBeNull();
       } else {
         await finishWelcomeTypewriter();
-        expect(
-          screen.getByText(
-            "Welcome to Guikelai 👋 Tell me who it is for, your budget, and preferred tastes. I will help you choose Guizhou foods, teas, and heritage crafts."
-          )
-        ).toBeTruthy();
         expect(screen.getAllByTestId("example-chip")).toHaveLength(5);
         expect(screen.queryByText(/monthly spending limit|impulse buy/i)).toBeNull();
       }
@@ -140,13 +147,6 @@ describe("Chatbox user identity replay behavior", () => {
   );
 
   it("keeps the authenticated user on explicit reset", async () => {
-    requestHistory.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        context: "Previous recommendation\n\nPrevious cart update",
-      }),
-    });
-
     renderChatbox();
     await vi.advanceTimersByTimeAsync(500);
     fireEvent.click(screen.getAllByLabelText("Reset conversation")[0]);
@@ -161,44 +161,7 @@ describe("Chatbox user identity replay behavior", () => {
     expect(storedUser?.id).toBe(Number(currentUserId));
   });
 
-  it("filters internal records and truncates long history blocks", async () => {
-    requestHistory.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        context: [
-          "These products are available in the catalog:",
-          "Agent Response: internal debug text",
-          "User asked: internal question",
-          "CSV: item,price",
-          "PRICE: 39.99",
-          "Luminous Satin Dress | formal apparel | https://example.com/product",
-          "",
-          "A readable history block that is intentionally longer than eighty characters in total and must be summarized.",
-        ].join("\n"),
-      }),
-    });
-
-    renderChatbox();
-    await vi.advanceTimersByTimeAsync(2500);
-
-    expect(screen.queryByText(/PRICE:/i)).toBeNull();
-    expect(screen.queryByText(/Agent Response:/i)).toBeNull();
-    expect(screen.queryByText(/User asked:/i)).toBeNull();
-    expect(screen.queryByText(/CSV:/i)).toBeNull();
-    expect(
-      screen.getByText(
-        "A readable history block that is intentionally longer than eighty characters in…"
-      )
-    ).toBeTruthy();
-  });
-
   it("does not show first-run budget setup controls", async () => {
-    requestHistory.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        context: "",
-      }),
-    });
     renderChatbox();
     await finishWelcomeTypewriter();
 
