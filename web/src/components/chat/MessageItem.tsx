@@ -221,7 +221,7 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
                   <div className="messages__item--image-meta">
                     {image.price != null && (
                       <span className="messages__item--image-price">
-                        ${image.price.toFixed(2)}
+                        {image.url && image.url.includes('dangdang.com') ? '¥' : '$'}{image.price.toFixed(2)}
                       </span>
                     )}
                     {image.rating != null && (
@@ -272,7 +272,7 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
                             name: image.productName,
                             price:
                               image.price != null
-                                ? `$${image.price.toFixed(2)}`
+                                ? `${image.url && image.url.includes('dangdang.com') ? '¥' : '$'}{image.price.toFixed(2)}`
                                 : "—",
                             rating:
                               image.rating != null
