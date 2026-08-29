@@ -8,8 +8,7 @@
  * - Shows catalog provenance, price/image disclaimers and concrete checks
  *   instead of fabricating buyer reviews.
  * - Add-to-cart goes straight through the orchestrator cart API.
- * - External purchase links point to the JD search deep link from the
- *   catalog and a Taobao search fallback built from the product name.
+ * - External purchase uses the original marketplace URL supplied by retrieval.
  * - Closes on overlay click, the close button and Escape.
  */
 
@@ -67,9 +66,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     }
   };
 
-  const taobaoUrl = `https://s.taobao.com/search?q=${encodeURIComponent(
-    product.name
-  )}`;
   const hasPrice = typeof product.price === "number" && product.price > 0;
 
   // --- Specifications (empty fields stay hidden) ---
@@ -204,17 +200,9 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   rel="noopener noreferrer"
                   className="product-detail-modal__buy-link"
                 >
-                  {t("productDetail.buyOnJD")}
+                  {t("productDetail.buyNow")}
                 </a>
               )}
-              <a
-                href={taobaoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="product-detail-modal__buy-link product-detail-modal__buy-link--taobao"
-              >
-                {t("productDetail.buyOnTaobao")}
-              </a>
             </div>
           </div>
         </div>

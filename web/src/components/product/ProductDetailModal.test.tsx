@@ -30,7 +30,7 @@ const product: CatalogProduct = {
 };
 
 describe("ProductDetailModal", () => {
-  it("renders the product details with JD and Taobao buy links", () => {
+  it("opens the original marketplace URL for purchase", () => {
     render(<ProductDetailModal product={product} onClose={vi.fn()} />);
 
     expect(screen.getByText("苗银凤冠")).toBeTruthy();
@@ -41,18 +41,13 @@ describe("ProductDetailModal", () => {
       screen.getByText("苗银锻造技艺是国家级非物质文化遗产。")
     ).toBeTruthy();
 
-    const jdLink = screen.getByRole("link", { name: /buy on jd\.com/i });
-    expect(jdLink.getAttribute("href")).toBe(
+    const buyLink = screen.getByRole("link", { name: /buy now/i });
+    expect(buyLink.getAttribute("href")).toBe(
       "https://search.jd.com/Search?keyword=苗银凤冠"
     );
-    expect(jdLink.getAttribute("target")).toBe("_blank");
-    expect(jdLink.getAttribute("rel")).toBe("noopener noreferrer");
-
-    const taobaoLink = screen.getByRole("link", { name: /buy on taobao/i });
-    expect(taobaoLink.getAttribute("href")).toBe(
-      `https://s.taobao.com/search?q=${encodeURIComponent("苗银凤冠")}`
-    );
-    expect(taobaoLink.getAttribute("target")).toBe("_blank");
+    expect(buyLink.getAttribute("target")).toBe("_blank");
+    expect(buyLink.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(screen.queryByRole("link", { name: /buy on taobao/i })).toBeNull();
   });
 
   it("closes through the close button, the overlay and Escape", () => {

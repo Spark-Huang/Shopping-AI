@@ -45,6 +45,7 @@
     "ratingLabel": "评分 {{rating}} / 5",
     "historyBadge": "历史",
     "share": "分享",
+    "buy": "购买",
     "shareCopied": "已复制到剪贴板",
     "shareFailed": "分享失败，请手动复制。",
     "shareProduct": "分享{{name}}",
@@ -153,8 +154,7 @@
   "productDetail": {
     "title": "商品详情",
     "storyLabel": "产地与文化",
-    "buyOnJD": "前往京东购买",
-    "buyOnTaobao": "前往淘宝购买",
+    "buyNow": "去购买",
     "close": "关闭",
     "specs": "规格参数",
     "specCategory": "分类",

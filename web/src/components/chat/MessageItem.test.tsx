@@ -1,13 +1,8 @@
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ChatMessage from "./MessageItem";
+import * as productsApi from "../../api/productsApi";
 import "../../i18n";
 
 vi.mock("react-toastify", () => ({
@@ -17,6 +12,54 @@ vi.mock("react-toastify", () => ({
 afterEach(cleanup);
 
 describe("ChatMessage marketing interactions", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("keeps the retrieved marketplace URL and exposes a direct buy link", async () => {
+    vi.spyOn(productsApi, "fetchProducts").mockResolvedValue([
+      {
+        category: "guizhou",
+        subcategory: "ethnic-wear",
+        name: "Silver Earrings",
+        description: "Catalog copy",
+        url: "https://product.dangdang.com/wrong-product.html",
+        price: 99,
+        image: "/images/catalog.jpg",
+        verifiedAt: "2026-08-29",
+        imageType: "illustration",
+      },
+    ]);
+
+    render(
+      <ChatMessage
+        role="image_row"
+        content={[
+          {
+            productUrl: "https://www.yiwugo.com/image.jpg",
+            productName: "Silver Earrings",
+            externalUrl: "https://www.yiwugo.com/product/detail/123.html",
+            price: 2.25,
+            currency: "CNY",
+          },
+        ]}
+        productName=""
+      />
+    );
+
+    const cardBuyLink = screen.getByRole("link", { name: "Buy" });
+    expect(cardBuyLink.getAttribute("href")).toBe(
+      "https://www.yiwugo.com/product/detail/123.html"
+    );
+    expect(cardBuyLink.getAttribute("target")).toBe("_blank");
+
+    fireEvent.click(screen.getByRole("button", { name: /view product/i }));
+    const modalBuyLink = await screen.findByRole("link", { name: /buy now/i });
+    expect(modalBuyLink.getAttribute("href")).toBe(
+      "https://www.yiwugo.com/product/detail/123.html"
+    );
+    expect(modalBuyLink.getAttribute("target")).toBe("_blank");
+    expect(modalBuyLink.getAttribute("rel")).toBe("noopener noreferrer");
+  });
+
   it("renders product cards when images are empty or fail to load", () => {
     render(
       <ChatMessage

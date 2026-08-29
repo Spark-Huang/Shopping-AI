@@ -281,15 +281,6 @@
   background: rgba(29, 78, 216, 0.08);
 }
 
-.product-detail-modal__buy-link--taobao {
-  border-color: #b45309;
-  color: #b45309;
-}
-
-.product-detail-modal__buy-link--taobao:hover {
-  background: rgba(180, 83, 9, 0.08);
-}
-
 /* Mobile: full-screen sheet. */
 @media (max-width: 480px) {
   .product-detail-overlay {

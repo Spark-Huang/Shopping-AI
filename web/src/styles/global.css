@@ -770,6 +770,31 @@ li {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-top: 8px;
+}
+
+.messages__item--image-add {
+  margin-top: 0;
+  width: auto;
+}
+
+.messages__item--image-buy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--brand-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.messages__item--image-buy:hover {
+  background: var(--glass-fill);
+  color: var(--brand-deep);
 }
 
 .messages__item--image-favorite,

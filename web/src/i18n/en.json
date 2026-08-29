@@ -45,6 +45,7 @@
     "ratingLabel": "Rating {{rating}} out of 5",
     "historyBadge": "History",
     "share": "Share",
+    "buy": "Buy",
     "shareCopied": "Copied to clipboard",
     "shareFailed": "Could not share. Please copy manually.",
     "shareProduct": "Share {{name}}",
@@ -153,8 +154,7 @@
   "productDetail": {
     "title": "Product details",
     "storyLabel": "Origin and culture",
-    "buyOnJD": "Buy on JD.com",
-    "buyOnTaobao": "Buy on Taobao",
+    "buyNow": "Buy now",
     "close": "Close",
     "specs": "Specifications",
     "specCategory": "Category",

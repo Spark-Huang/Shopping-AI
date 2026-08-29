@@ -96,7 +96,13 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
         const grounded = catalog.find(
           (product) => product.name === image.productName
         );
-        if (grounded) setDetailProduct(grounded);
+        if (grounded)
+          setDetailProduct({
+            ...grounded,
+            url: image.externalUrl || grounded.url,
+            image: image.productUrl || grounded.image,
+            price: image.price ?? grounded.price,
+          });
       } catch (error) {
         console.warn("MessageItem: catalog detail enrichment unavailable", error);
       }
@@ -312,16 +318,28 @@ const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
                     )}
                   </div>
                 )}
-                {onAddToCart && (
+                {(onAddToCart || image.externalUrl) && (
                   <div className="messages__item--image-actions">
-                    <button
-                      type="button"
-                      className="messages__item--image-add"
-                      onClick={() => onAddToCart(image)}
-                      disabled={cartAddInFlight}
-                    >
-                      {t("chatbox.addToCart")}
-                    </button>
+                    {image.externalUrl && (
+                      <a
+                        href={image.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="messages__item--image-buy"
+                      >
+                        {t("chatbox.buy")}
+                      </a>
+                    )}
+                    {onAddToCart && (
+                      <button
+                        type="button"
+                        className="messages__item--image-add"
+                        onClick={() => onAddToCart(image)}
+                        disabled={cartAddInFlight}
+                      >
+                        {t("chatbox.addToCart")}
+                      </button>
+                    )}
                     {onToggleFavorite && (
                       <button
                         type="button"
