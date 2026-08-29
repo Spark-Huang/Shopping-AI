@@ -1,31 +1,16 @@
 {
-  "short_name": "Guikela",
-  "name": "Guikela",
+  "short_name": "贵客来",
+  "name": "贵客来｜贵州好物智能购物助手",
   "icons": [
     {
-      "src": "favicon-16.png",
-      "sizes": "16x16",
+      "src": "images/logo-guikelai.png",
+      "sizes": "1024x1024",
       "type": "image/png"
-    },
-    {
-      "src": "favicon-32.png",
-      "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "favicon.png",
-      "sizes": "64x64",
-      "type": "image/png"
-    },
-    {
-      "src": "apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any"
+      ,"purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#0F767E",
-  "background_color": "#ffffff"
+  "theme_color": "#A52A24",
+  "background_color": "#FFF9F0"
 }

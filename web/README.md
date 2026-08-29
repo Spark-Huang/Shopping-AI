@@ -1,10 +1,10 @@
-# Shopping AI Web
+# 贵客来 Web
 
-A modern React TypeScript interface for the Shopping AI demo.
+贵客来贵州好物智能购物 Agent 的 React + TypeScript 前端。
 
 ## Overview
 
-This UI provides a clean, responsive interface for interacting with the AI-powered Shopping AI assistant. It features real-time chat, image upload capabilities, and a modern design built with React, TypeScript, and Tailwind CSS.
+This UI provides a responsive interface for the Guikelai Guizhou shopping agent, with streaming chat, image search, a grounded local catalog, cart and budget tools.
 
 ## Architecture
 
