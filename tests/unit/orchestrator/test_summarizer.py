@@ -137,6 +137,30 @@ class TestSummaryAgentInvoke:
             "session_id": None,
         }
 
+    def test_product_cards_are_persisted_with_response(
+        self, summary_agent: SummaryAgent, post_recorder: _PostRecorder
+    ) -> None:
+        state = State(
+            user_id=1,
+            query="buy tea",
+            context="short context",
+            response="Found tea",
+            retrieved={
+                "Green Tea": {
+                    "image": "/tea.jpg",
+                    "url": "https://example.com/tea",
+                    "price": 12.5,
+                    "currency": "CNY",
+                }
+            },
+        )
+
+        summary_agent.invoke(state, verbose=False)
+
+        payload = post_recorder.calls[1].payload
+        assert payload["response"].startswith("Found tea\n<!--PRODUCTS:")
+        assert json.loads(payload["response"].split("<!--PRODUCTS:", 1)[1].rsplit("-->", 1)[0]) == state.retrieved
+
     def test_long_context_uses_llm_tool_call(
         self, summary_agent: SummaryAgent, post_recorder: _PostRecorder
     ) -> None:

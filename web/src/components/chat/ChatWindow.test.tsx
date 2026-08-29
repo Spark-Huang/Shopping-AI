@@ -225,6 +225,27 @@ describe("Chatbox session history", () => {
       { id: 1, user_id: 1, session_id: 2, role: "user", content: "买玩具", created_at: null },
       { id: 2, user_id: 1, session_id: 2, role: "assistant", content: "找到积木", created_at: null },
     ]);
+    const productHistory: historyApi.SessionMessage[] = [
+      { id: 1, user_id: 1, session_id: 2, role: "user", content: "买茶", created_at: null },
+      {
+        id: 2,
+        user_id: 1,
+        session_id: 2,
+        role: "assistant",
+        content: "找到都匀毛尖",
+        created_at: null,
+        products: {
+          "Duyun Maojian": {
+            image: "https://example.com/tea.jpg",
+            url: "https://example.com/tea",
+            price: 88,
+            currency: "CNY",
+            rating: 4.8,
+          },
+        },
+      },
+    ];
+    vi.mocked(historyApi.fetchSessionMessages).mockImplementation(async () => productHistory);
     vi.mocked(historyApi.deleteChatSession).mockResolvedValue();
     vi.mocked(historyApi.createChatSession).mockResolvedValue({
       id: 3, user_id: 1, title: "", created_at: null, updated_at: null,
@@ -277,6 +298,10 @@ describe("Chatbox session history", () => {
   });
 
   it("loads and continues a selected session", async () => {
+    vi.mocked(historyApi.fetchSessionMessages).mockResolvedValue([
+      { id: 1, user_id: 1, session_id: 2, role: "user", content: "买玩具", created_at: null },
+      { id: 2, user_id: 1, session_id: 2, role: "assistant", content: "找到积木", created_at: null },
+    ]);
     renderChatbox();
     fireEvent.click(screen.getAllByLabelText("History")[0]);
     fireEvent.click(await screen.findByText("买玩具"));
@@ -294,6 +319,15 @@ describe("Chatbox session history", () => {
         )
       ).toBe(true)
     );
+  });
+
+  it("loads persisted product cards with a selected session", async () => {
+    renderChatbox();
+    fireEvent.click(screen.getAllByLabelText("History")[0]);
+    fireEvent.click(await screen.findByText("买玩具"));
+
+    expect(await screen.findByText("Duyun Maojian")).toBeTruthy();
+    expect(screen.getByText("¥88.00")).toBeTruthy();
   });
 
   it("deletes a session from history", async () => {

@@ -33,6 +33,7 @@ import {
 } from "./chatInput";
 import { splitHistoryIntoBubbles } from "./chatHistory";
 import { readChatStream } from "./ChatWindow.useStream";
+import { parseImagesPayload } from "../../lib/images";
 import { scheduleSession, sleep } from "./streamSession";
 import type { ChatMessage, SessionSummary } from "./ChatWindow.types";
 
@@ -158,13 +159,21 @@ const Chatbox: React.FC<ChatboxProps> = ({
       setImage("");
       setPreviewImage("");
       setMessages(
-        sessionMessages.map((item) => ({
-          role: item.role,
-          content: item.content,
-          productName: "",
-          isWelcome: false,
-          isHistory: true,
-        }))
+        sessionMessages.flatMap<ChatMessage>((item) => {
+          const baseMessage = {
+            content: item.content,
+            productName: "",
+            isWelcome: false,
+            isHistory: true,
+          };
+          if (item.role !== "assistant" || !item.products) {
+            return [{ ...baseMessage, role: item.role }];
+          }
+          return [
+            { ...baseMessage, role: item.role },
+            { ...baseMessage, role: "image_row", content: parseImagesPayload(item.products) },
+          ];
+        })
       );
     } catch {
       toast.error(t("sessions.loadFailed"));

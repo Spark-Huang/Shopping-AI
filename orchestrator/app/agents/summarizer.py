@@ -14,6 +14,17 @@ import sys
 import time
 
 
+def format_products_metadata(retrieved: dict) -> str:
+    """Encode this turn's product cards for lossless message persistence."""
+    if not retrieved:
+        return ""
+    try:
+        encoded = json.dumps(retrieved, ensure_ascii=False, separators=(",", ":"))
+    except (TypeError, ValueError):
+        return ""
+    return f"\n<!--PRODUCTS:{encoded}-->"
+
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
@@ -134,7 +145,10 @@ class SummaryAgent:
                 f"{self.memory_base_url}/user/{output_state.user_id}/messages/extract",
                 json={
                     "query": output_state.query,
-                    "response": output_state.response,
+                    "response": (
+                        output_state.response
+                        + format_products_metadata(output_state.retrieved)
+                    ),
                     "session_id": output_state.session_id,
                 },
                 headers={"Authorization": output_state.authorization},

@@ -7,6 +7,7 @@
 import { config } from "../config/appConfig";
 import { authFetch } from "../lib/auth";
 import { HistoryResponse } from "../types/orders";
+import { ProductPayload } from "../lib/images";
 
 /**
  * Fetch the persisted conversation context for the given user id.
@@ -52,6 +53,7 @@ export interface SessionMessage {
   session_id: number | null;
   role: "user" | "assistant";
   content: string;
+  products?: ProductPayload | null;
   created_at: string | null;
 }
 
