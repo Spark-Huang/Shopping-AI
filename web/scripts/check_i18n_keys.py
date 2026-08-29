@@ -30,13 +30,21 @@ def main() -> int:
         for k in missing_in_en:
             print(f"MISSING in en.json: {k}")
         return 1
-    # Also catch empty values
+    # Also catch empty values (strings, lists, or nested containers)
     for name, res in (("en", en), ("zh", zh)):
         for k in flat_keys(res):
             node = res
             for part in k.split("."):
                 node = node[part]
-            if not isinstance(node, str) or not node.strip():
+            if isinstance(node, str):
+                empty = not node.strip()
+            elif isinstance(node, list):
+                empty = not node or any(
+                    isinstance(v, str) and not v.strip() for v in node
+                )
+            else:
+                empty = False
+            if empty:
                 print(f"EMPTY value in {name}.json: {k}")
                 return 1
     print(f"OK: {len(en_keys)} keys identical in en.json and zh.json")

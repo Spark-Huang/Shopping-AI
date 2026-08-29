@@ -19,9 +19,12 @@ export const formatCny = (value: number): string => cnyFormatter.format(value);
 export const currencySymbol = (currency: string): string =>
   CURRENCY_SYMBOLS[currency.toUpperCase()] ?? "";
 
-/** Format a price with the symbol of its currency code (falls back to CNY). */
+/** Format a price with the symbol of its currency code (no symbol if unknown). */
 export const formatPrice = (value: number, currency?: string): string => {
-  if (!currency || currency.toUpperCase() === "CNY") {
+  if (!currency) {
+    return value.toFixed(2);
+  }
+  if (currency.toUpperCase() === "CNY") {
     return formatCny(value);
   }
   return `${currencySymbol(currency)}${value.toFixed(2)}`;
