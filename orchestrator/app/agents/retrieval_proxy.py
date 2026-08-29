@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 class RetrieverAgent(QueryFilterMixin):
+    _GUIZHOU_GIFT_CATEGORIES = ("ethnic-wear", "craft", "food", "drink")
+
     def __init__(
         self,
         config,
@@ -44,7 +46,12 @@ class RetrieverAgent(QueryFilterMixin):
         self.http_session.mount("https://", adapter)
         self.http_session.mount("http://", adapter)
         
-        self.model = OpenAI(base_url=config.llm_port, api_key=os.environ["LLM_API_KEY"])
+        self.model = OpenAI(
+            base_url=config.llm_port,
+            api_key=os.environ["LLM_API_KEY"],
+            timeout=getattr(config, "llm_timeout_seconds", 60.0),
+            max_retries=1,
+        )
         self.cache_ttl = 60.0
         self.cache: OrderedDict[str, tuple[float, Dict[str, Any]]] = OrderedDict()
         self.cache_limit = 64
@@ -88,6 +95,40 @@ class RetrieverAgent(QueryFilterMixin):
         while len(self.cache) > self.cache_limit:
             self.cache.popitem(last=False)
 
+    def _broaden_gift_set_search(
+        self, query: str, entities: List[str], categories: List[str], k: int
+    ) -> tuple[List[str], List[str], int]:
+        """Make broad gift-set requests reliably span several Guizhou categories."""
+        normalized = (query or "").casefold()
+        gift_set_intent = any(
+            marker in normalized
+            for marker in ("伴手礼", "礼盒", "gift set", "souvenir set")
+        )
+        if not gift_set_intent:
+            return entities, categories, k
+
+        available_categories = [
+            category
+            for category in self._GUIZHOU_GIFT_CATEGORIES
+            if category in self.categories
+        ]
+        if not available_categories:
+            return entities, categories, k
+
+        if any("\u4e00" <= character <= "\u9fff" for character in query):
+            broadened_entities = [
+                "贵州茶",
+                "贵州不辣食品饮品",
+                "贵州非遗手作伴手礼",
+            ]
+        else:
+            broadened_entities = [
+                "Guizhou tea",
+                "mild Guizhou food or drink",
+                "Guizhou heritage craft gift",
+            ]
+        return broadened_entities, available_categories, max(k, 6)
+
     async def invoke(
         self,
         state: State,
@@ -109,6 +150,10 @@ class RetrieverAgent(QueryFilterMixin):
         entities, categories, filters = await self._extract_retrieval_inputs(state)
         end = time.monotonic()
         state.timings["retriever_categories"] = end - start
+
+        entities, categories, k = self._broaden_gift_set_search(
+            state.query, entities, categories, k
+        )
 
         if self._is_out_of_catalog(entities, categories):
             logging.info(

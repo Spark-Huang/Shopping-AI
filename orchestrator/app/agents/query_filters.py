@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Tuple
 from openai import OpenAI
 
 from .state import State
+from .llm_extras import no_thinking_extra_body
 from .stream_buffer import detect_language
 from ..tools.functions import retrieval_extraction_function, parse_tool_call_fallback
 
@@ -76,7 +77,7 @@ DECISION LOGIC (apply in order, stop at the first match):
    -> Examples:
       "I need a summer top"                  -> search_entities: ["summer top"]
       "I need something for a party"         -> search_entities: ["party outfit"]
-   -> Do NOT use generic browse words such as "anything", "everything", "something", "items", "products", or "stuff" as search_entities when they are the only catalog target. For constraint-only requests like "show me anything under $100" or "what do you have on sale", return an empty search_entities list and preserve any explicit filters.
+   -> Do NOT use generic browse words such as "anything", "everything", "something", "items", "products", or "stuff" as search_entities when they are the only catalog target. For constraint-only requests like "show me anything under ¥100" or "what do you have on sale", return an empty search_entities list and preserve any explicit filters.
 
 CATEGORIES:
 - Choose up to three from the provided Available categories list ONLY.
@@ -84,7 +85,7 @@ CATEGORIES:
 - You may reuse the same category when only one is relevant.
 
 FILTERS:
-- Return `min_price` / `max_price` ONLY when the user explicitly states a budget ("under $50", "between 20 and 100 dollars").
+- Return `min_price` / `max_price` ONLY when the user explicitly states a budget ("under ¥50", "between 20 and 100 yuan").
 - NEVER default to 0. If no price is mentioned, OMIT the field entirely.
 - Return numeric values without currency symbols.
 
@@ -109,7 +110,7 @@ IMAGE ATTACHED TO THIS TURN:
 - DECISION LOGIC step 1 (ATTRIBUTE FOLLOW-UP echoing a name from context) DOES NOT APPLY when an image is attached.
 
 Extraction rules WITH an image:
-A. Filter-only refinement of the image ("do you have this under $100", "anything like this in blue", "is this on sale"):
+A. Filter-only refinement of the image ("do you have this under ¥100", "anything like this in blue", "is this on sale"):
    -> search_entities: []  (the image carries the semantic intent)
    -> STILL extract `min_price` / `max_price` from any explicit budget words ("under", "below", "less than", "no more than", "between X and Y"). Dropping the budget is a bug; always emit it when it appears.
    -> Pick one matching category from the allowed list only if the text makes it obvious; otherwise repeat the first category slot.
@@ -118,14 +119,14 @@ B. New product type alongside the image ("a bag that goes with this", "shoes lik
    -> STILL emit price filters if the user gave a budget.
 
 Worked examples (image always attached):
-  User: "do you have this product under $100"
+  User: "do you have this product under ¥100"
     -> search_entities: []
     -> max_price: 100
   User: "anything like this between 50 and 80 dollars"
     -> search_entities: []
     -> min_price: 50
     -> max_price: 80
-  User: "a bag that goes with this under $200"
+  User: "a Guizhou gift that goes with this under ¥200"
     -> search_entities: ["bag"]
     -> max_price: 200
   User: "show me the red one"
@@ -154,7 +155,7 @@ Worked examples (image always attached):
                 tools=[retrieval_extraction_function],
                 tool_choice="auto",
                 temperature=0.0,
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}}
+                extra_body=no_thinking_extra_body()
             )
 
             logging.info(
@@ -212,7 +213,7 @@ Worked examples (image always attached):
             ]
 
             # When an image is attached, the LLM is instructed to return empty
-            # entities for filter-only refinements ("under $100"). The catalog
+            # entities for filter-only refinements ("under ¥100"). The catalog
             # retriever's dual text+image path still needs at least one text
             # entry to keep the text branch alive and to size the image
             # search's k-multiplier. Fall back to the raw query text only for
@@ -269,10 +270,13 @@ Worked examples (image always attached):
             state.query or "", getattr(state, "language", None)
         )
         if language == "zh":
-            return "抱歉，目前商品目录不包含这类商品。请尝试服饰、鞋履、包袋或配饰类商品。"
+            return (
+                "抱歉，贵客来目前只收录贵州特色好物。你可以试试贵州食品、"
+                "黔茶、非遗手作、苗绣蜡染或苗银饰品。"
+            )
         return (
-            "Unfortunately, that product category is not in our catalog. "
-            "Please try apparel, footwear, bags, or accessories instead."
+            "Guikelai currently lists Guizhou specialties only. Try Guizhou "
+            "foods, tea, heritage crafts, batik, embroidery, or silverwork."
         )
 
 
@@ -284,7 +288,13 @@ Worked examples (image always attached):
         if isinstance(value, (int, float)):
             return float(value)
         if isinstance(value, str):
-            cleaned = value.strip().replace("$", "").replace(",", "")
+            cleaned = (
+                value.strip()
+                .replace("$", "")
+                .replace("¥", "")
+                .replace("￥", "")
+                .replace(",", "")
+            )
             try:
                 return float(cleaned)
             except ValueError:

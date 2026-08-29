@@ -74,6 +74,10 @@ class OrchestratorConfig(BaseModel):
             "(planner routing, retrieval extraction). Falls back to llm_name when unset."
         )
     )
+    llm_timeout_seconds: float = Field(
+        default=60.0,
+        description="Per-request timeout for OpenAI-compatible model calls.",
+    )
     
     # Service Endpoints
     retriever_port: str = Field(..., description="Search service endpoint")
@@ -124,6 +128,12 @@ class OrchestratorConfig(BaseModel):
         """Validate memory length is positive."""
         if v <= 0:
             raise ValueError("memory_length must be positive")
+        return v
+
+    @validator('llm_timeout_seconds')
+    def validate_llm_timeout_seconds(cls, v):
+        if v <= 0:
+            raise ValueError("llm_timeout_seconds must be positive")
         return v
     
     @validator('chatter_max_tokens')

@@ -1,5 +1,7 @@
 # Configuration override for a hosted OpenAI-compatible API gateway.
-# Apply with CONFIG_OVERRIDE=config-build.yaml and SAFETY_API_KEY set in .env.
+# Optional safety override. Apply with CONFIG_OVERRIDE=config-build.yaml and
+# SAFETY_API_KEY set in .env. This file intentionally lives outside the base
+# safety directory so NeMo Guardrails does not load it automatically.
 # The gateway base URL is read by the safety service from SAFETY_BASE_URL
 # (default http://llm-gateway:8000/v1).
 models:

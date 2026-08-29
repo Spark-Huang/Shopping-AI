@@ -41,11 +41,11 @@ retrieval_extraction_function = {
                 },
                 "min_price": {
                     "type": "number",
-                    "description": "Minimum price in dollars. OMIT THIS FIELD unless the user explicitly states a lower bound (e.g., 'over $50'). Never default to 0."
+                    "description": "Minimum reference price in Chinese yuan. OMIT THIS FIELD unless the user explicitly states a lower bound (e.g., 'over ¥50'). Never default to 0."
                 },
                 "max_price": {
                     "type": "number",
-                    "description": "Maximum price in dollars. OMIT THIS FIELD unless the user explicitly states an upper bound (e.g., 'under $100'). Never default to 0."
+                    "description": "Maximum reference price in Chinese yuan. OMIT THIS FIELD unless the user explicitly states an upper bound (e.g., 'under ¥100'). Never default to 0."
                 }
             },
             "required": ["search_entities", "category_one", "category_two", "category_three"]

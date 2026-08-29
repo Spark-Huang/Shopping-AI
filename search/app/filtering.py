@@ -6,8 +6,21 @@ from typing import Any
 
 
 def extract_product_categories(document: Any) -> list[str]:
+    metadata = getattr(document, "metadata", {}) or {}
+    structured = [
+        str(metadata.get(key, "")).strip().lower()
+        for key in ("category", "subcategory")
+        if str(metadata.get(key, "")).strip()
+    ]
+    if structured:
+        return structured
+
     try:
-        category_part = document.page_content.split("|")[-1].strip()
+        # Legacy documents may not carry structured metadata. The catalog
+        # text layout is name | description | category,subcategory | story,
+        # so the category segment is the third field rather than the last.
+        parts = document.page_content.split("|")
+        category_part = parts[2].strip() if len(parts) >= 3 else parts[-1].strip()
         if "PRICE:" in category_part:
             category_part = category_part.split("PRICE:")[0].strip()
         return [
@@ -48,7 +61,13 @@ def coerce_float(value: Any) -> float | None:
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, str):
-        cleaned = value.strip().replace("$", "").replace(",", "")
+        cleaned = (
+            value.strip()
+            .replace("$", "")
+            .replace("¥", "")
+            .replace("￥", "")
+            .replace(",", "")
+        )
         try:
             return float(cleaned)
         except ValueError:

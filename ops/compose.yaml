@@ -72,6 +72,7 @@ services:
     environment:
       SAFETY_API_KEY: ${SAFETY_API_KEY:-omniroute-local}
       SAFETY_BASE_URL: ${SAFETY_BASE_URL:-${LLM_BASE_URL:-http://llm-gateway:8000/v1}}
+      SAFETY_NAME: ${SAFETY_NAME:-${LLM_NAME:-openrouter/stealth/ox-alpha}}
       CONFIG_OVERRIDE: ${CONFIG_OVERRIDE:-}
     ports:
       - "8012:8012"

@@ -38,4 +38,9 @@ def apply_endpoint_overrides(data: dict[str, Any]) -> dict[str, Any]:
         for config_key in ("text_embed_port", "image_embed_port"):
             if data.get(config_key):
                 data[config_key] = endpoint
+    # Inject the real embedding model from the environment so tracked YAML
+    # configs only carry a neutral placeholder model name.
+    model_name = os.environ.get("EMBED_NAME")
+    if model_name:
+        data["text_model_name"] = model_name
     return data

@@ -111,7 +111,7 @@ class GraphNodes:
         
         try:
             response = requests.post(
-                f"{GraphNodes._config.safety_base_url}/safety/input/check",
+                f"{GraphNodes._config.safety_base_url}/safety/input",
                 json={"user_id": state.user_id, "query": state.query},
                 headers={"Authorization": state.authorization},
                 timeout=10
@@ -175,7 +175,7 @@ class GraphNodes:
         
         try:
             response = requests.post(
-                f"{GraphNodes._config.safety_base_url}/safety/output/check",
+                f"{GraphNodes._config.safety_base_url}/safety/output",
                 json={"user_id": state.user_id, "query": state.response},
                 headers={"Authorization": state.authorization},
                 timeout=10
