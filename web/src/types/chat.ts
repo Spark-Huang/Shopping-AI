@@ -11,6 +11,7 @@ export interface ImageContent {
   productName: string;
   externalUrl?: string;
   price?: number;
+  currency?: string;
   rating?: number;
 }
 
@@ -55,5 +56,6 @@ export interface ProductInfo {
   image?: string;
   url?: string;
   price?: number;
+  currency?: string;
   rating?: number;
 }

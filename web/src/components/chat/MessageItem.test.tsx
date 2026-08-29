@@ -117,6 +117,31 @@ describe("ChatMessage marketing interactions", () => {
     expect(writeText.mock.calls[0][0]).toContain("Silk Dress");
   });
 
+  it("renders provided currency symbols without guessing", () => {
+    render(
+      <ChatMessage
+        role="image_row"
+        content={[
+          {
+            productUrl: "/images/cny.jpg",
+            productName: "Dangdang Product",
+            price: 69,
+            currency: "CNY",
+          },
+          {
+            productUrl: "/images/missing-currency.jpg",
+            productName: "Legacy Product",
+            price: 49.99,
+          },
+        ]}
+        productName=""
+      />
+    );
+
+    expect(screen.getAllByText("¥69.00")).toHaveLength(1);
+    expect(screen.getAllByText("49.99").length).toBeGreaterThan(0);
+  });
+
   it("keeps product add buttons disabled while a direct add is in flight", async () => {
     const onAddToCart = vi.fn(() => new Promise<void>(() => undefined));
 

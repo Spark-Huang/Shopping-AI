@@ -69,6 +69,7 @@ async def retrieve_with_freshness(request: TextQueryRequest, image_bool: bool):
                 "urls",
                 "prices",
                 "ratings",
+                "currencies",
             ),
             result,
         )

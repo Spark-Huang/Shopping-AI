@@ -5,6 +5,14 @@ from __future__ import annotations
 from typing import Any
 
 
+USD_TO_CNY = 7.2
+
+
+def query_currency(filters: dict[str, Any]) -> str:
+    currency = filters.get("currency")
+    return str(currency).upper() if currency else "CNY"
+
+
 def extract_product_categories(document: Any) -> list[str]:
     try:
         category_part = document.page_content.split("|")[-1].strip()
@@ -68,6 +76,23 @@ def apply_structured_filters(
     max_price = coerce_float(filters.get("max_price"))
     if min_price is None and max_price is None:
         return results
+
+    currency = query_currency(filters)
+    result_currency = next(
+        (
+            str(result[0].metadata.get("currency", "CNY")).upper()
+            for result in results
+        ),
+        "CNY",
+    )
+    if currency != result_currency:
+        if currency == "USD" and result_currency == "CNY":
+            conversion = USD_TO_CNY
+            min_price = min_price * conversion if min_price is not None else None
+            max_price = max_price * conversion if max_price is not None else None
+        elif currency == "CNY" and result_currency == "USD":
+            min_price = min_price * USD_TO_CNY if min_price is not None else None
+            max_price = max_price * USD_TO_CNY if max_price is not None else None
 
     filtered_results = []
     for result in results:

@@ -85,6 +85,8 @@ CATEGORIES:
 
 FILTERS:
 - Return `min_price` / `max_price` ONLY when the user explicitly states a budget ("under $50", "between 20 and 100 dollars").
+- Also return `currency` whenever the budget states or clearly implies a currency (`$`/dollars -> USD; ¥/￥/RMB/yuan -> CNY; a bare number in a Chinese-language query -> CNY).
+- Numeric bounds are in that stated currency; never silently convert currencies.
 - NEVER default to 0. If no price is mentioned, OMIT the field entirely.
 - Return numeric values without currency symbols.
 
@@ -201,6 +203,10 @@ Worked examples (image always attached):
                 categories = sanitized_categories if sanitized_categories else self.categories
 
                 filters = self._normalize_filters(response_dict)
+                if filters and "currency" in response_dict:
+                    currency = str(response_dict["currency"]).upper()
+                    if currency in {"USD", "CNY", "EUR", "GBP", "JPY"}:
+                        filters["currency"] = currency
 
             # Drop blank/whitespace-only entities regardless of how they got
             # there. The text-embedding endpoint 400s on empty input, so this

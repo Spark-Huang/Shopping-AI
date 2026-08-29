@@ -223,12 +223,12 @@ class TestLanguageInstruction:
     def test_zh_instruction_pinned_to_chinese(self) -> None:
         instruction = ChatterAgent._language_instruction("zh")
         assert "Chinese" in instruction
-        assert "Always render prices as $X.XX (USD)" in instruction
+        assert "original currency" in instruction
 
     def test_en_instruction_pinned_to_english(self) -> None:
         instruction = ChatterAgent._language_instruction("en")
         assert "English" in instruction
-        assert "Always render prices as $X.XX (USD)" in instruction
+        assert "original currency" in instruction
 
 
 class TestChatterGroundingPrompt:

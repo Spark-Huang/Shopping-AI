@@ -437,7 +437,12 @@ class Retriever:
 
         final_texts = []
         for result in ranked_results:
-            text = f"{result[0].page_content}\nPRICE: {result[0].metadata['price']}"
+            price = result[0].metadata["price"]
+            currency = result[0].metadata.get("currency")
+            price_text = (
+                f"{price} {currency}" if currency else str(price)
+            )
+            text = f"{result[0].page_content}\nPRICE: {price_text}"
             if category_mismatch:
                 text += "\nCATEGORY_MISMATCH: true"
             final_texts.append(text)
@@ -458,5 +463,8 @@ class Retriever:
             [
                 coerce_float(result[0].metadata.get("rating"))
                 for result in ranked_results
+            ],
+            [
+                result[0].metadata.get("currency") for result in ranked_results
             ],
         )

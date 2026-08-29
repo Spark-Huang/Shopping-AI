@@ -181,6 +181,7 @@ class RetrieverAgent(QueryFilterMixin):
                 urls = results.get("urls") or []
                 prices = results.get("prices") or []
                 ratings = results.get("ratings") or []
+                currencies = results.get("currencies") or []
                 for idx, (text, name, img) in enumerate(
                     zip(results["texts"], results["names"], results["images"])
                 ):
@@ -189,10 +190,13 @@ class RetrieverAgent(QueryFilterMixin):
                     url = urls[idx] if idx < len(urls) else None
                     price = prices[idx] if idx < len(prices) else None
                     rating = ratings[idx] if idx < len(ratings) else None
+                    currency = currencies[idx] if idx < len(currencies) else None
                     if url:
                         entry["url"] = url
                     if price is not None:
                         entry["price"] = price
+                    if currency:
+                        entry["currency"] = currency
                     if rating is not None:
                         entry["rating"] = rating
                     retrieved_dict[name] = entry

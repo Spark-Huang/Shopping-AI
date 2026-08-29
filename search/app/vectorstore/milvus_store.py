@@ -79,6 +79,12 @@ class Milvus:
                     dtype=DataType.FLOAT_VECTOR,
                     dim=dimension,
                 ),
+                FieldSchema(
+                    name="currency",
+                    dtype=DataType.VARCHAR,
+                    max_length=8,
+                    nullable=True,
+                ),
             ],
             description=f"{self.collection_name} collection",
             enable_dynamic_field=True,

@@ -13,6 +13,13 @@ from langgraph.config import get_stream_writer
 from .stream_buffer import StreamBuffer, detect_language, language_instruction
 
 
+CURRENCY_SYMBOLS = {"CNY": "¥", "USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥"}
+
+
+def currency_symbol(currency: str) -> str:
+    return CURRENCY_SYMBOLS.get(currency.upper(), "")
+
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
@@ -95,7 +102,20 @@ class ChatterAgent:
         """
         if not state.retrieved:
             return "(no fresh catalog results this turn)"
-        return "\n".join(f"- {name}" for name in state.retrieved.keys())
+        lines = []
+        for name, details in state.retrieved.items():
+            if not isinstance(details, dict):
+                lines.append(f"- {name}")
+                continue
+            price = details.get("price")
+            currency = details.get("currency")
+            if price is not None and currency:
+                lines.append(f"- {name}: {currency_symbol(currency)}{float(price):.2f} ({currency})")
+            elif price is not None:
+                lines.append(f"- {name}: {float(price):.2f} (currency unavailable)")
+            else:
+                lines.append(f"- {name}")
+        return "\n".join(lines)
 
     @classmethod
     def _describe_preceding_agent(cls, state: State) -> str:

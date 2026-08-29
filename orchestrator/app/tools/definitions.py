@@ -41,11 +41,16 @@ retrieval_extraction_function = {
                 },
                 "min_price": {
                     "type": "number",
-                    "description": "Minimum price in dollars. OMIT THIS FIELD unless the user explicitly states a lower bound (e.g., 'over $50'). Never default to 0."
+                    "description": "Minimum price in the user's stated currency. OMIT THIS FIELD unless the user explicitly states a lower bound (e.g., 'over $50' or 'over ¥50'). Never default to 0."
                 },
                 "max_price": {
                     "type": "number",
-                    "description": "Maximum price in dollars. OMIT THIS FIELD unless the user explicitly states an upper bound (e.g., 'under $100'). Never default to 0."
+                    "description": "Maximum price in the user's stated currency. OMIT THIS FIELD unless the user explicitly states an upper bound (e.g., 'under $100' or 'under ¥100'). Never default to 0."
+                },
+                "currency": {
+                    "type": "string",
+                    "enum": ["USD", "CNY", "EUR", "GBP", "JPY"],
+                    "description": "Currency explicitly stated by the user. Use CNY for ¥/￥/RMB and USD for $/dollars. If a Chinese-language query states a bare number, use CNY; otherwise omit this field."
                 }
             },
             "required": ["search_entities", "category_one", "category_two", "category_three"]

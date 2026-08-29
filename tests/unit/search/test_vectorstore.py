@@ -709,7 +709,7 @@ class TestRetrieve:
             ]
         )
 
-        texts, ids, sims, names, images, urls, prices, ratings = await retriever.retrieve(
+        texts, ids, sims, names, images, urls, prices, ratings, currencies = await retriever.retrieve(
             query=["summer outfit"],
             categories=["dress"],
             filters=None,
@@ -737,7 +737,7 @@ class TestRetrieve:
             return_value=[(_doc("Silk Dress"), 0.9)]
         )
 
-        texts, ids, sims, names, images, urls, prices, ratings = await retriever.retrieve(
+        texts, ids, sims, names, images, urls, prices, ratings, currencies = await retriever.retrieve(
             query=["summer outfit"],
             categories=[],
             k=50,
@@ -774,7 +774,7 @@ class TestRetrieve:
             ]
         )
 
-        texts, _ids, _sims, names, _images, _urls, _prices, _ratings = await retriever.retrieve(
+        texts, _ids, _sims, names, _images, _urls, _prices, _ratings, _currencies = await retriever.retrieve(
             query=["dresses"],
             categories=["dress"],
             k=50,
@@ -797,7 +797,7 @@ class TestRetrieve:
         search = MagicMock(side_effect=_search)
         retriever.text_db.similarity_search_with_relevance_scores = search
 
-        texts, _ids, _sims, names, _images, _urls, _prices, _ratings = await retriever.retrieve(
+        texts, _ids, _sims, names, _images, _urls, _prices, _ratings, _currencies = await retriever.retrieve(
             query=["夏季裙子"],
             categories=["dress"],
             k=4,
@@ -836,7 +836,7 @@ class TestRetrieve:
             ]
         )
 
-        texts, _ids, sims, names, _images, _urls, prices, _ratings = await retriever.retrieve(
+        texts, _ids, sims, names, _images, _urls, prices, _ratings, _currencies = await retriever.retrieve(
             query=["夏季裙子"],
             categories=["dress"],
             filters={"max_price": 50},
@@ -860,7 +860,7 @@ class TestRetrieve:
             ]
         )
 
-        _texts, _ids, _sims, names, _images, _urls, _prices, _ratings = await retriever.retrieve(
+        _texts, _ids, _sims, names, _images, _urls, _prices, _ratings, _currencies = await retriever.retrieve(
             query=["q"],
             categories=["dress"],
             k=5,
@@ -880,7 +880,7 @@ class TestRetrieve:
             ]
         )
 
-        _texts, _ids, _sims, names, _images, _urls, _prices, _ratings = await retriever.retrieve(
+        _texts, _ids, _sims, names, _images, _urls, _prices, _ratings, _currencies = await retriever.retrieve(
             query=["q"],
             categories=["dress"],
             filters={"min_price": 20},
@@ -903,7 +903,7 @@ class TestRetrieve:
             ]
         )
 
-        _, _, sims, names, _, urls, prices, ratings = await retriever.retrieve(
+        _, _, sims, names, _, urls, prices, ratings, currencies = await retriever.retrieve(
             query=["thing"],
             categories=["dress"],
             image="data:image/jpeg;base64,AAA",
@@ -949,7 +949,7 @@ class TestRetrieve:
             return_value=[(shared, 0.9), (shared, 0.85)]
         )
 
-        _texts, ids, _sims, names, _images, _urls, _prices, _ratings = await retriever.retrieve(
+        _texts, ids, _sims, names, _images, _urls, _prices, _ratings, _currencies = await retriever.retrieve(
             query=["q"],
             categories=["dress"],
             k=5,

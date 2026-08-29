@@ -46,7 +46,12 @@ def language_instruction(language: str) -> str:
         return (
             "\n\nLANGUAGE: Always reply in Chinese (Simplified). "
             "Product names from the catalog stay in their original language, "
-            "but every sentence you write must be in Chinese. Always render "
-            "prices as $X.XX (USD); never use ¥ or another currency symbol."
+            "but every sentence you write must be in Chinese. Render each "
+            "catalog price in its original currency, as provided with the "
+            "product; never invent, replace, or silently convert a currency."
         )
-    return "\n\nLANGUAGE: Always reply in English. Always render prices as $X.XX (USD)."
+    return (
+        "\n\nLANGUAGE: Always reply in English. Render each catalog price in "
+        "its original currency, as provided with the product; never invent, "
+        "replace, or silently convert a currency."
+    )

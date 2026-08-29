@@ -17,6 +17,7 @@ export const parseImagesPayload = (
       };
       if (info.url) entry.externalUrl = info.url;
       if (typeof info.price === "number") entry.price = info.price;
+      if (typeof info.currency === "string") entry.currency = info.currency;
       if (typeof info.rating === "number") entry.rating = info.rating;
       return entry;
     })

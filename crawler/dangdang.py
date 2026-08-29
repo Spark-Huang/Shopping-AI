@@ -17,6 +17,7 @@ class Product:
     description: str
     url: str
     price: float | None
+    currency: str | None
     image: str
     category: str
     subcategory: str
@@ -30,6 +31,7 @@ class Product:
             "description": self.description,
             "url": self.url,
             "price": self.price,
+            "currency": self.currency,
             "image": self.image,
             "platform": self.platform,
             "crawled_at": crawled_at,
@@ -53,9 +55,33 @@ def _absolute_url(value: str | None) -> str:
     return f"https:{url}" if url.startswith("//") else url
 
 
-def _price(value: str | None) -> float | None:
+def _price(value: str | None) -> tuple[float | None, str | None]:
+    text = value or ""
     match = re.search(r"\d+(?:[.,]\d+)?", value or "")
-    return float(match.group().replace(",", "")) if match else None
+    if not match:
+        return None, None
+    currency = next(
+        (code for symbol, code in _CURRENCY_SYMBOLS.items() if symbol in text),
+        None,
+    )
+    return float(match.group().replace(",", "")), currency
+
+
+_CURRENCY_SYMBOLS = {
+    "¥": "CNY",
+    "￥": "CNY",
+    "RMB": "CNY",
+    "CNY": "CNY",
+    "$": "USD",
+    "US$": "USD",
+    "USD": "USD",
+    "€": "EUR",
+    "EUR": "EUR",
+    "£": "GBP",
+    "GBP": "GBP",
+    "JP¥": "JPY",
+    "JPY": "JPY",
+}
 
 
 def parse_products(html: str, category: str) -> list[Product]:
@@ -85,12 +111,16 @@ def parse_products(html: str, category: str) -> list[Product]:
         )
         if "url_none" in image_source:
             image_source = ""
+        price, currency = _price(
+            price_tag.text if price_tag is not None else None
+        )
         products.append(
             Product(
                 name=name,
                 description=name,
                 url=f"https://product.dangdang.com/{sku}.html",
-                price=_price(price_tag.text if price_tag is not None else None),
+                price=price,
+                currency=currency,
                 image=_absolute_url(image_source),
                 category=category,
                 subcategory=category,
