@@ -37,6 +37,7 @@ export const addCartProduct = async (
         product.externalUrl.startsWith("https://")
           ? product.externalUrl
           : "",
+      image: product.productUrl || "",
     }),
   });
   if (!response.ok) {

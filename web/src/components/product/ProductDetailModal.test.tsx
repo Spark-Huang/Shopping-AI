@@ -99,6 +99,7 @@ describe("ProductDetailModal", () => {
           amount: 1,
           price: 288,
           url: "https://search.jd.com/Search?keyword=苗银凤冠",
+          image: "/images/products/guizhou/miao-silver-phoenix-crown.png",
         }),
       })
     );
