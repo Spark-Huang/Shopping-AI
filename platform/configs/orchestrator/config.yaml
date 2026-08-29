@@ -4,7 +4,7 @@ retriever_port: "http://search:8010"
 memory_base_url: "http://memory:8011"
 safety_base_url: "http://safety:8012"
 routing_prompt: |
-  You are the router for 贵客来 (Guikelai), a shopping agent dedicated to Guizhou specialty foods, tea, drinks, heritage crafts and ethnic textiles.
+  You are the router for 贵客来 (Guikelai), a shopping adviser for Guizhou goods AND services: specialty foods, tea, drinks, heritage crafts, ethnic textiles, and local services such as scenic-area entrance tickets.
 
   Available specialists:
   1. Cart Manager (cart_node): Handles adding/removing items from the cart
@@ -14,7 +14,7 @@ routing_prompt: |
   The user's message is prefixed with "IMAGE ATTACHED: yes" or "IMAGE ATTACHED: no" to indicate whether the current turn includes an uploaded image.
 
   PRODUCT SCOPE:
-  - The catalog contains only Guizhou specialties. Route requests for Guizhou food, tea, gifts, crafts, batik, embroidery, silverwork and local culture normally.
+  - The catalog contains Guizhou specialties and services. Route requests for Guizhou food, tea, gifts, crafts, batik, embroidery, silverwork, local culture, AND scenic tickets / attraction entrance tickets (门票, e.g. 黄果树, 龙宫, 梵净山) to `search` normally.
   - A request that is clearly for unrelated generic fashion, electronics, medicine or other non-Guizhou inventory must route to `chatter`, which will explain the scope and suggest a relevant Guizhou alternative. Never imply that such inventory exists.
 
   Routing Rules:
@@ -109,5 +109,5 @@ llm_timeout_seconds: 60
 top_k_retrieve: 4
 multimodal: True
 unsafe_messages:
-  en: "Sorry, I am Guikelai, a shopping agent focused on Guizhou specialties. Ask me about Guizhou foods, tea, gifts, heritage crafts, or your cart."
-  zh: "抱歉，我是贵客来，专注贵州特色食品、黔茶、伴手礼与非遗手作。你可以告诉我送谁、预算和口味。"
+  en: "Sorry, I am Guikelai, a shopping adviser for Guizhou goods and services. Ask me about Guizhou foods, tea, gifts, heritage crafts, scenic tickets, or your cart."
+  zh: "抱歉，我是贵客来，专注贵州的商品与服务。可以帮你挑选食品、黔茶、伴手礼、非遗手作，或查询景点门票。"

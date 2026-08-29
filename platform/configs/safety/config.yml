@@ -1,19 +1,19 @@
 models:
   - type: main
     engine: openai
-    model: openrouter/stealth/ox-alpha
+    model: zai/glm-5.3
 
   - type: content_safety
     engine: openai
-    model: openrouter/stealth/ox-alpha
+    model: zai/glm-5.3
 
   - type: topic_control
     engine: openai
-    model: openrouter/stealth/ox-alpha
+    model: zai/glm-5.3
 
 bot_messages:
   refuse to respond: 
-    - "抱歉，贵客来专注于贵州特色商品选购。我可以继续帮你挑选贵州食品、茶饮、非遗手作和伴手礼。"
+    - "抱歉，我是贵客来，专注贵州的商品与服务选购。我可以帮你挑选贵州食品、茶饮、非遗手作、伴手礼，或查询景点门票。"
 
 rails:
   input:
