@@ -18,3 +18,17 @@ def test_parse_products_extracts_real_catalog_fields():
 
 def test_search_url_encodes_gbk_spaces():
     assert "key=%B1%A3%CE%C2%B1%AD" in search_url("保温杯")
+
+
+def test_parse_products_accepts_legacy_html_markup():
+    html = """
+    <li id="294858">
+      <a title="中长半身裙" href="//product.dangdang.com/294858.html">中长半身裙</a>
+      <img data-original="//img.example-cdn.local/skirt.jpg" src="//img.example-cdn.local/skirt.jpg">
+      <span class="price_n">¥119.00</span>
+    </li>
+    """
+    products = parse_products(html, "dress")
+    assert len(products) == 1
+    assert products[0].name == "中长半身裙"
+    assert products[0].image == "https://img.example-cdn.local/skirt.jpg"

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from html.parser import HTMLParser
 from typing import Any
+from xml.etree.ElementTree import Element
 from urllib.parse import quote_from_bytes
-from xml.etree.ElementTree import fromstring
 
 
 
@@ -98,5 +99,40 @@ def parse_products(html: str, category: str) -> list[Product]:
     return products
 
 
-def parse_html(html: str):
-    return fromstring(f"<root>{html}</root>")
+class _CatalogHtmlParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.root = Element("root")
+        self.stack = [self.root]
+        self.current = self.root
+
+    def handle_starttag(self, tag, attrs):
+        element = Element(tag, dict(attrs))
+        self.stack[-1].append(element)
+        self.stack.append(element)
+        self.current = element
+        if tag in {"br", "img", "input", "link", "meta"}:
+            self.stack.pop()
+            self.current = self.stack[-1]
+
+    def handle_startendtag(self, tag, attrs):
+        self.stack[-1].append(Element(tag, dict(attrs)))
+
+    def handle_data(self, data):
+        if self.current.text is None:
+            self.current.text = ""
+        self.current.text += data
+
+    def handle_endtag(self, tag):
+        for index in range(len(self.stack) - 1, 0, -1):
+            if self.stack[index].tag == tag:
+                del self.stack[index:]
+                self.current = self.stack[-1]
+                break
+
+
+def parse_html(html: str) -> Element:
+    parser = _CatalogHtmlParser()
+    parser.feed(html)
+    parser.close()
+    return parser.root

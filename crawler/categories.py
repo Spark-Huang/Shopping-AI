@@ -11,6 +11,7 @@ CATEGORY_KEYWORDS: tuple[str, ...] = (
     "stationery",
     "beauty",
     "dress",
+    "skirt",
     "kitchenware",
     "toys",
     "pet supplies",
@@ -31,6 +32,15 @@ def category_for(keyword: str) -> str:
         "earbuds": "headphones",
         "women clothing": "dress",
         "women's clothing": "dress",
+        "skirt": "dress",
+        "midi skirt": "skirt",
+        "中裙": "skirt",
+        "半身裙": "skirt",
+        "中长半身裙": "skirt",
+        "dress skirt": "dress",
+        "半身裙": "dress",
+        "中长半身裙": "dress",
+        "连衣裙": "dress",
         "home storage": "storage box",
     }
     value = aliases.get(normalized, normalized)
