@@ -31,21 +31,21 @@ class ContentSafety(ContentSafetyBase):
         if safety_policy and not getattr(self.config, "rails", None):
             self.config.rails = safety_policy
 
-        # Apply endpoint overrides if CONFIG_OVERRIDE is set
+        # Inject environment endpoints and apply an optional explicit override.
         apply_endpoint_overrides(self.config, config_path)
 
         # Initialize the safety application with the modified configuration.
         self.app = LLMRails(self.config)
 
     async def call_input_safety(self, user_input: str):
-        """Run the input-side content checks for a user message."""
-        options = {"safety": ["input"]}
+        """Run only the input rails for a user message."""
+        options = {"rails": ["input"]}
         messages = [{"role": "user", "content": user_input}]
         return await self.app.generate_async(messages=messages, options=options)
 
     async def call_output_safety(self, bot_response: str):
-        """Run the output-side content checks for an assistant response."""
-        options = {"safety": ["output"]}
+        """Run only the output rails for an assistant response."""
+        options = {"rails": ["output"]}
         messages = [{"role": "user", "content": ""}, {"role": "assistant", "content": bot_response}]
         return await self.app.generate_async(messages=messages, options=options)
 

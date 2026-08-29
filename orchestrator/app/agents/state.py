@@ -1,6 +1,6 @@
 
 """
-Data models for Shopping AI.
+Data models for Guikelai.
 
 This module defines the core data structures used throughout the shopping assistant,
 including the main State object that flows through the LangGraph and supporting models.
@@ -106,6 +106,10 @@ class State(BaseModel):
         description="Internal per-request safety stream buffer"
     )
     safety_enabled: bool = Field(default=True, description="Enable safety checks")
+    dialect: bool = Field(
+        default=False,
+        description="Guizhou-dialect reply mode requested by the UI (stylistic only)"
+    )
     timings: Annotated[Dict[str, float], ior] = Field(
         default_factory=dict,
         description="Performance timing information for each step"

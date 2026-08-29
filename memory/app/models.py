@@ -158,3 +158,23 @@ class OrderCreate(BaseModel):
         if not isfinite(value) or value < 0:
             raise ValueError("price must be a finite, non-negative number")
         return value
+
+
+class CheckoutItem(BaseModel):
+    """One cart line to settle during checkout."""
+    item: str = Field(min_length=1, max_length=500)
+    price: Optional[float] = None
+
+    @field_validator("price")
+    @classmethod
+    def validate_price(cls, value: Optional[float]) -> Optional[float]:
+        if value is None:
+            return value
+        if not isfinite(value) or value < 0:
+            raise ValueError("price must be a finite, non-negative number")
+        return value
+
+
+class CheckoutRequest(BaseModel):
+    """Multi-select checkout: turn the given cart lines into orders."""
+    items: list[CheckoutItem] = Field(min_length=1)

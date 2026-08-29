@@ -9,6 +9,7 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 from .state import State
+from .llm_extras import no_thinking_extra_body
 from langgraph.config import get_stream_writer
 from .stream_buffer import StreamBuffer, detect_language, language_instruction
 
@@ -46,8 +47,10 @@ class ChatterAgent:
         self.config = config
         
         self.model = AsyncOpenAI(
-            base_url=config.llm_port, 
-            api_key=os.environ["LLM_API_KEY"]
+            base_url=config.llm_port,
+            api_key=os.environ["LLM_API_KEY"],
+            timeout=getattr(config, "llm_timeout_seconds", 60.0),
+            max_retries=1,
         )
         logging.info(f"ChatterAgent.__init__() | Initialization complete")
 
@@ -68,7 +71,7 @@ class ChatterAgent:
             price = entry.get("price")
             if price is not None:
                 try:
-                    lines.append(f"- {amount} x {name} @ ${float(price):.2f}")
+                    lines.append(f"- {amount} x {name} @ ¥{float(price):.2f}")
                 except (TypeError, ValueError):
                     lines.append(f"- {amount} x {name}")
             else:
@@ -83,7 +86,7 @@ class ChatterAgent:
             return "(none)"
         try:
             return "\n".join(
-                f"- {entry.get('item', '')} @ ${float(entry.get('price', 0) or 0):.2f} on {entry.get('purchased_at', '')}"
+                f"- {entry.get('item', '')} @ ¥{float(entry.get('price', 0) or 0):.2f} on {entry.get('purchased_at', '')}"
                 for entry in entries[:5]
             )
         except (TypeError, ValueError):
@@ -169,8 +172,21 @@ class ChatterAgent:
             f"{recent_context}"
         )
 
+        system_prompt = self.config.chatter_prompt + language_instruction(language)
+        # Guizhou-dialect mode (stylistic): flavour the reply with common
+        # local expressions while keeping the grounding rules intact.
+        if getattr(state, "dialect", False):
+            system_prompt += (
+                "\n\nDIALECT MODE: The user enabled Guizhou-dialect flavour. "
+                "Write your reply in Chinese with a light Guizhou flavour — "
+                "sprinkle in widely understood local expressions such as "
+                "“要得”“巴适”“安逸”“整”“克(去)”“嘞”“搞快些” where they fit "
+                "naturally, and keep the tone warm and playful. Never "
+                "sacrifice clarity or the grounding rules for dialect; "
+                "product names, prices, and cart operations stay exact."
+            )
         messages = [
-            {"role": "system", "content": self.config.chatter_prompt + language_instruction(language)},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ]
 
@@ -207,10 +223,14 @@ class ChatterAgent:
             # chatter_max_tokens is the chatter generation cap; fall back to
             # memory_length when unset (legacy behaviour, default unchanged).
             max_tokens=getattr(self.config, "chatter_max_tokens", None) or self.config.memory_length,
-            extra_body={"chat_template_kwargs": {"enable_thinking": False}}
+            extra_body=no_thinking_extra_body()
         )
 
         async for chunk in stream:
+            # Some gateways emit chunks with empty choices (e.g. usage-only
+            # final chunks); skip them instead of indexing errors.
+            if not chunk.choices:
+                continue
             if chunk.choices[0].delta.content:
                 content = chunk.choices[0].delta.content
                 full_response += content

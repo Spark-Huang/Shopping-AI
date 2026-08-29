@@ -6,9 +6,9 @@ key to be present in each model's parameters, so we inject them at load time
 from environment variables (``SAFETY_BASE_URL`` / ``SAFETY_API_KEY``) before
 the safety application is constructed.
 
-``apply_endpoint_overrides`` additionally honours ``CONFIG_OVERRIDE``: if the
-override YAML (same directory, e.g. ``config-build.yaml``) lists models with a
-``base_url`` under ``parameters``, those values win.
+``apply_endpoint_overrides`` additionally honours ``CONFIG_OVERRIDE``. Runtime
+override files live in the sibling ``safety-overrides`` directory so
+``RailsConfig.from_path`` cannot accidentally merge them into the base config.
 """
 
 import os
@@ -26,6 +26,7 @@ def _inject_openai_params(config) -> None:
     """Ensure every model carries base_url/api_key for OpenAI-compatible engines."""
     base_url = os.environ.get("SAFETY_BASE_URL", DEFAULT_BASE_URL)
     api_key = os.environ.get("SAFETY_API_KEY", "EMPTY")
+    model_name = os.environ.get("SAFETY_NAME")
     for model in getattr(config, "models", []):
         engine = getattr(model, "engine", "") or ""
         if "openai" not in str(engine):
@@ -36,6 +37,8 @@ def _inject_openai_params(config) -> None:
         params.setdefault("base_url", base_url)
         params.setdefault("api_key", api_key)
         model.parameters = params
+        if model_name:
+            model.model = model_name
 
 
 def apply_endpoint_overrides(config, config_dir: str = "/app/platform/configs"):
@@ -54,8 +57,15 @@ def apply_endpoint_overrides(config, config_dir: str = "/app/platform/configs"):
         logger.info("Using default OpenAI-compatible endpoints for safety configuration")
         return
 
-    # Load the override config file to get the base_url values
-    override_path = os.path.join(config_dir, override_file)
+    # Keep optional configurations outside the RailsConfig directory. NeMo
+    # Guardrails merges every YAML file in that directory, which would create
+    # duplicate model entries even when CONFIG_OVERRIDE is unset.
+    override_path = os.path.join(
+        os.path.dirname(config_dir), "safety-overrides", override_file
+    )
+    # Preserve support for callers/tests that pass a standalone config folder.
+    if not os.path.exists(override_path):
+        override_path = os.path.join(config_dir, override_file)
 
     if not os.path.exists(override_path):
         logger.warning(f"Safety override config file not found at {override_path}")

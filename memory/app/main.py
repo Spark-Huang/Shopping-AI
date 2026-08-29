@@ -16,6 +16,7 @@ from .cognee_client import CogneeClient
 from .database import SessionLocal, initialize_database
 from .models import (
     CartItem,
+    CheckoutRequest,
     ContextUpdate,
     ItemUpdate,
     LoginRequest,
@@ -449,6 +450,48 @@ async def remove_cart(user_id: int, item_update: ItemUpdate):
         "user_id": user_id,
         "message": f"In response to the user's request, I have removed {amount} of '{item}' from cart."
         }
+
+
+@app.post("/user/{user_id}/checkout")
+async def checkout(user_id: int, checkout_request: CheckoutRequest):
+    """Settle the selected cart lines: record one order per line, then clear them from the cart.
+
+    The order price is the line total (unit price x cart amount) so the
+    orders summary reflects actual spending; the amount is kept in the note.
+    """
+    created_orders: list[Order] = []
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            db.add(User(id=user_id, context=""))
+        for entry in checkout_request.items:
+            cart_item = (
+                db.query(CartItem)
+                .filter(CartItem.user_id == user_id, CartItem.item == entry.item)
+                .first()
+            )
+            if not cart_item:
+                raise HTTPException(status_code=404, detail=f"Item not in cart: {entry.item}")
+            unit_price = entry.price if entry.price is not None else cart_item.price
+            total_price = unit_price * cart_item.amount if unit_price is not None else None
+            order = Order(
+                user_id=user_id,
+                item=cart_item.item,
+                price=total_price,
+                purchased_at=datetime.now(UTC),
+                note=f"Checked out x{cart_item.amount}",
+            )
+            db.add(order)
+            created_orders.append(order)
+            db.delete(cart_item)
+        db.commit()
+        for order in created_orders:
+            db.refresh(order)
+    return {
+        "user_id": user_id,
+        "orders": [_order_dict(order) for order in created_orders],
+        "message": f"In response to the user's request, I have checked out {len(checkout_request.items)} item(s) and created orders.",
+    }
 
 
 @app.post("/user/{user_id}/cart/clear")

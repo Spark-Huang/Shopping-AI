@@ -15,6 +15,7 @@ from langgraph.config import get_stream_writer
 
 from ..budget import extract_monthly_budget
 from ..state import State
+from ..llm_extras import no_thinking_extra_body
 from ...tools.functions import (
     add_to_cart_function,
     bulk_add_to_cart_function,
@@ -54,7 +55,12 @@ class CartAgent(ReferenceResolutionMixin, CatalogMatchMixin, MemoryClientMixin):
         
             # Store configuration
             self.memory_base_url = config.memory_base_url
-            self.model = OpenAI(base_url=config.llm_port, api_key=os.environ["LLM_API_KEY"])
+            self.model = OpenAI(
+                base_url=config.llm_port,
+                api_key=os.environ["LLM_API_KEY"],
+                timeout=getattr(config, "llm_timeout_seconds", 60.0),
+                max_retries=1,
+            )
             self.search_url = config.retriever_port
             self.categories = config.categories
             self.retry_strategy = Retry(
@@ -166,7 +172,7 @@ class CartAgent(ReferenceResolutionMixin, CatalogMatchMixin, MemoryClientMixin):
                 tools=tools,
                 tool_choice="auto",
                 stream=False,
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}}
+                extra_body=no_thinking_extra_body()
             )
 
             message = response.choices[0].message

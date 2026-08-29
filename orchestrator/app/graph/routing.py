@@ -13,7 +13,7 @@ def _format_monthly_order_summary(state: State) -> str:
             if str(order.get("purchased_at", "")).startswith(_CURRENT_MONTH_PREFIX)
         ]
         if not orders:
-            return "0 orders, total $0.00 this month"
+            return "0 orders, total ¥0.00 this month"
     
         try:
             total = sum(float(order.get("price") or 0) for order in orders)
@@ -23,7 +23,7 @@ def _format_monthly_order_summary(state: State) -> str:
                 "Use the individual order prices below."
             )
         items = ", ".join(str(order.get("item") or "Unnamed item") for order in orders)
-        return f"{len(orders)} orders, total ${total:.2f} this month: {items}"
+        return f"{len(orders)} orders, total ¥{total:.2f} this month: {items}"
 
 
 class GraphRouting:

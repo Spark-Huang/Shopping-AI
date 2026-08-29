@@ -33,13 +33,24 @@ def milvus_from_csv(retriever: Retriever, csv_path: str, verbose: bool = False) 
 
     dataframe = pd.read_csv(csv_path)
     metadatas = dataframe.to_dict(orient="records")
+    # Optional cultural-story column: when present, it is appended to the
+    # embedded text so vector retrieval matches cultural queries (e.g.
+    # "Miao silver intangible heritage") and the story reaches the chatter
+    # via the retrieval result text.
+    stories = (
+        dataframe["story"].fillna("").astype(str).tolist()
+        if "story" in dataframe.columns
+        else [""] * len(dataframe)
+    )
     combined_texts = [
         f"{name} | {description} | {category},{subcategory}"
-        for name, description, category, subcategory in zip(
+        + (f" | {story}" if story.strip() else "")
+        for name, description, category, subcategory, story in zip(
             dataframe["name"].tolist(),
             dataframe["description"].tolist(),
             dataframe["category"].tolist(),
             dataframe["subcategory"].tolist(),
+            stories,
         )
     ]
 

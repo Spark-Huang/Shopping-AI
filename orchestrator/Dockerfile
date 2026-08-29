@@ -14,6 +14,7 @@ COPY ./platform/data ./platform/data
 
 # Set environment variables
 ENV PYTHONPATH=/app
+ENV SHARED_CONFIG_ROOT=/app/platform/configs
 ENV LLM_API_KEY=${LLM_API_KEY}
 ENV SAFETY_BASE_URL=http://safety:8012
 
