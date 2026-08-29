@@ -10,6 +10,57 @@ Shopping AI is a bilingual shopping assistant that combines product search, cart
 - **safety** — applies input and output checks through an OpenAI-compatible endpoint.
 - **web** — provides the responsive React and TypeScript chat interface.
 
+
+## Tech Stack
+
+### Overall Architecture
+
+Multi-service architecture: an orchestrator API coordinates independent services (search / memory / safety) plus a React SPA, all talking over HTTP/JSON with SSE streaming for chat.
+
+### Backend
+
+| Layer | Technology | Notes |
+|---|---|---|
+| Language | **Python 3.12** | All services |
+| API framework | **FastAPI + Uvicorn** | Async endpoints, OpenAPI docs per service |
+| Agent orchestration | **LangGraph** | Planner - Retriever - Cart - Chatter - Summarizer multi-agent graph |
+| LLM access | **OpenAI-compatible API** via gateway | Pluggable models (GLM-5 etc.) |
+| Vector database | **Milvus** | COSINE metric, 2048-dim vectors |
+| Embeddings | **Zhipu embedding-3** (BigModel API) | 2048 dimensions |
+| Relational store | **SQLite** (SQLAlchemy ORM) | Users, sessions, messages, cart, orders; startup auto-migration |
+| Long-term memory | **cognee** (optional) | Background extraction into Milvus |
+| Safety | **NemoGuardrails** | Input/output moderation via OpenAI-compatible endpoint |
+| Tests | **pytest** | 800+ unit/integration tests |
+
+### Web Frontend
+
+| Layer | Technology |
+|---|---|
+| Framework | **React 18 + TypeScript** |
+| Build tool | **Vite** |
+| UI library | **Material UI (MUI)** |
+| Streaming | SSE (Server-Sent Events) chat parsing |
+| i18n | i18next (zh + en) |
+| Tests | **Vitest + Testing Library**, tsc --noEmit typecheck |
+
+### Crawler
+
+| Item | Technology |
+|---|---|
+| HTTP fetching | httpx with rate limiting and proxy support |
+| Platforms | Dangdang, Yiwugo, Piaojia (scenic tickets) - pluggable parser per platform |
+| Data pipeline | crawl -> clean -> Zhipu embedding -> Milvus upsert, TTL freshness refresh with stale fallback |
+
+### Infrastructure and Ops
+
+| Item | Technology |
+|---|---|
+| Containerization | **Docker Compose** (ops/compose.yaml) |
+| Public access | **Cloudflare Tunnel** |
+| Config | YAML shared config tree with local override layer |
+| CI quality | SonarQube, pre-commit hooks |
+
+
 ## Quick Start
 
 1. Install Docker Engine with Compose support and Node.js 20+.
