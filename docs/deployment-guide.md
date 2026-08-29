@@ -50,7 +50,7 @@ text_model_name: "<embedding模型名>"
 image_embed_port: "http://localhost:<网关端口>/v1"
 image_model_name: ""
 db_port: "http://localhost:19530"
-data_path: "<仓库绝对路径>/platform/data/products.csv"
+data_path: "<仓库绝对路径>/platform/data/products-empty.csv"
 ```
 
 `platform/configs/orchestrator/config-local.yaml`：

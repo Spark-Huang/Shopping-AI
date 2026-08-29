@@ -302,22 +302,27 @@ class TestProxyEndpoints:
         assert recorded["json"] == body
 
     def test_products_serves_csv_filtered_by_category(
-        self, main_module
+        self, main_module, monkeypatch: pytest.MonkeyPatch, tmp_path
     ) -> None:
+        csv_path = tmp_path / "products.csv"
+        csv_path.write_text(
+            "\n".join(
+                [
+                    '"category","subcategory","name","description","url","price","image","story"',
+                    '"guizhou","ethnic-wear","苗绣披肩","手工苗绣披肩","https://example.com/s1","158","/images/products/guizhou/miao-embroidered-shawl.png","苗绣故事"',
+                    '"guizhou","food","老干妈油辣椒","贵州风味辣酱","https://example.com/s2","9","/images/products/guizhou/chili.jpg","辣椒故事"',
+                    '"other","misc","外部商品","不在贵州目录","https://example.com/s3","10","",""',
+                ]
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(main_module, "PRODUCTS_CSV", csv_path)
+
         response = main_module.list_products(category="guizhou")
         products = response["products"]
 
-        assert len(products) == 52
+        assert len(products) == 2
         assert all(p["category"] == "guizhou" for p in products)
-        names = {p["name"] for p in products}
-        assert "苗银凤冠" in names
-        assert "都匀毛尖绿茶" in names
-        # New Guizhou batch items are served alongside the originals.
-        assert "水族马尾绣围腰" in names
-        assert "玉屏箫笛" in names
-        # Catalog expansion batch: 18 more Guizhou lines.
-        assert "大方彝族漆器食盒" in names
-        assert "雷山银球茶" in names
         by_name = {p["name"]: p for p in products}
         assert by_name["老干妈油辣椒"]["price"] == 9
         assert by_name["老干妈油辣椒"]["subcategory"] == "food"
@@ -327,19 +332,40 @@ class TestProxyEndpoints:
         )
         # Cultural stories ride along for the showcase page and agent.
         assert "苗绣" in by_name["苗绣披肩"]["story"]
-        assert by_name["通勤帆布托特包" if "通勤帆布托特包" in by_name else "老干妈油辣椒"]
 
     def test_products_without_category_returns_whole_catalog(
-        self, main_module
+        self, main_module, monkeypatch: pytest.MonkeyPatch, tmp_path
     ) -> None:
+        csv_path = tmp_path / "products.csv"
+        csv_path.write_text(
+            "\n".join(
+                [
+                    '"category","subcategory","name","description","url","price","image","story"',
+                    '"guizhou","ethnic-wear","苗绣披肩","手工苗绣披肩","https://example.com/s1","158","/images/products/guizhou/miao-embroidered-shawl.png","苗绣故事"',
+                ]
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(main_module, "PRODUCTS_CSV", csv_path)
+
         response = main_module.list_products(category=None)
         products = response["products"]
 
-        assert len(products) == 52
+        assert len(products) == 1
         categories = {p["category"] for p in products}
         assert categories == {"guizhou"}
         assert all(product["sourceUrl"] for product in products)
         assert all(product["verifiedAt"] for product in products)
+
+    def test_products_returns_empty_list_when_catalog_csv_missing(
+        self, main_module, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        """Until crawler data lands, a missing CSV degrades to an empty catalog."""
+        monkeypatch.setattr(main_module, "PRODUCTS_CSV", tmp_path / "absent.csv")
+
+        response = main_module.list_products(category="guizhou")
+
+        assert response == {"products": []}
 
     def test_add_context_passes_stripped_fact_to_memory_service(
         self, main_module, monkeypatch: pytest.MonkeyPatch

@@ -541,8 +541,11 @@ def list_products(category: Optional[str] = Query(default=None)):
     compatibility, but non-Guizhou records are never exposed.
     """
     if not PRODUCTS_CSV.exists():
-        logger.error(f"orchestrator | /products | catalog CSV not found at {PRODUCTS_CSV}")
-        raise HTTPException(status_code=500, detail="Product catalog unavailable")
+        logger.warning(
+            f"orchestrator | /products | catalog CSV not found at {PRODUCTS_CSV}; "
+            "returning empty catalog until crawler data lands"
+        )
+        return {"products": []}
 
     products = []
     try:
