@@ -255,7 +255,7 @@ const GuizhouPage: React.FC<GuizhouPageProps> = ({ onCartChange, onTourStart }) 
   // Re-shuffle the whole pool whenever the seed changes; the grid then shows
   // a random batch so every "换一批" click surfaces fresh picks.
   const shuffled = useMemo(
-    () => shuffleWithSeed(products, shuffleSeed),
+    () => shuffleWithSeed(products, shuffleSeed).slice(0, 10),
     [products, shuffleSeed]
   );
 
