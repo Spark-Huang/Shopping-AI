@@ -18,10 +18,18 @@ from .catalog_match import _extract_price
 
 
 class MemoryClientMixin:
+    def _memory_headers(self) -> Dict[str, str]:
+        state = getattr(self, "state", None)
+        if state is None or state.authorization is None:
+            return {}
+        return {"Authorization": state.authorization}
 
     def _get_cart(self, user_id: int) -> Cart:
 
-        response = requests.get(f"{self.memory_base_url}/user/{user_id}/cart")
+        response = requests.get(
+            f"{self.memory_base_url}/user/{user_id}/cart",
+            headers=self._memory_headers(),
+        )
         logging.info(f"CartAgent._get_cart() | Response text: {response.text}.")
         if response.status_code == 200:
             cart_data = json.loads(response.text)["cart"]
@@ -54,6 +62,7 @@ class MemoryClientMixin:
         response = requests.post(
             f"{self.memory_base_url}/user/{user_id}/cart/add",
             json=payload,
+            headers=self._memory_headers(),
         )
         if response.status_code == 200:
             return response.json()["message"]
@@ -106,6 +115,7 @@ class MemoryClientMixin:
         response = requests.post(
             f"{self.memory_base_url}/user/{user_id}/cart/remove",
             json={"item": catalog_item_name, "amount": quantity},
+            headers=self._memory_headers(),
         )
         if response.status_code == 200:
             return response.json()["message"]

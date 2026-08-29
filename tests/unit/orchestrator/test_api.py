@@ -165,6 +165,34 @@ class TestHealthAndRoot:
 
 
 class TestProxyEndpoints:
+    def test_session_routes_forward_authorization_to_memory(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        token = _bearer()
+        requests_seen = []
+
+        class _Response:
+            status_code = 200
+
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self):
+                return []
+
+        def _request(method: str, url: str, **kwargs):
+            requests_seen.append((method, url, kwargs.get("headers")))
+            return _Response()
+
+        monkeypatch.setattr(main_module.requests, "get", lambda url, **kwargs: _request("GET", url, **kwargs))
+        monkeypatch.setattr(main_module.requests, "post", lambda url, **kwargs: _request("POST", url, **kwargs))
+
+        assert main_module.session_list(1, authorization=token) == []
+        assert main_module.session_create(1, {}, authorization=token) == []
+
+        assert len(requests_seen) == 2
+        assert all(headers["Authorization"] == token for _, _, headers in requests_seen)
+
     def test_remove_cart_item_passes_body_to_memory_service(
         self, main_module, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -179,8 +207,15 @@ class TestProxyEndpoints:
             def json(self):
                 return {"user_id": 1, "message": "removed"}
 
-        def _post(url: str, json: Dict[str, Any], timeout: int):
-            recorded.update({"url": url, "json": json, "timeout": timeout})
+        def _post(
+            url: str,
+            json: Dict[str, Any],
+            headers: Dict[str, str],
+            timeout: int,
+        ):
+            recorded.update(
+                {"url": url, "json": json, "headers": headers, "timeout": timeout}
+            )
             return _Response()
 
         monkeypatch.setattr(main_module.requests, "post", _post)
@@ -192,6 +227,7 @@ class TestProxyEndpoints:
         assert response["message"] == "removed"
         assert recorded["url"].endswith("/user/1/cart/remove")
         assert recorded["json"] == {"item": "Silk Dress", "amount": 1}
+        assert recorded["headers"]["Authorization"] == _bearer()
 
     def test_add_context_passes_stripped_fact_to_memory_service(
         self, main_module, monkeypatch: pytest.MonkeyPatch
@@ -207,8 +243,15 @@ class TestProxyEndpoints:
             def json(self):
                 return {"user_id": 1, "message": "updated"}
 
-        def _post(url: str, json: Dict[str, Any], timeout: int):
-            recorded.update({"url": url, "json": json, "timeout": timeout})
+        def _post(
+            url: str,
+            json: Dict[str, Any],
+            headers: Dict[str, str],
+            timeout: int,
+        ):
+            recorded.update(
+                {"url": url, "json": json, "headers": headers, "timeout": timeout}
+            )
             return _Response()
 
         monkeypatch.setattr(main_module.requests, "post", _post)
@@ -222,6 +265,7 @@ class TestProxyEndpoints:
         assert response["message"] == "updated"
         assert recorded["url"].endswith("/user/1/context/add")
         assert recorded["json"] == {"new_context": "MONTHLY BUDGET: $50.00"}
+        assert recorded["headers"]["Authorization"] == _bearer()
 
 
 class TestAuthEnforcement:

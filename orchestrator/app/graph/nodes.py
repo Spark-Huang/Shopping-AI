@@ -41,6 +41,7 @@ class GraphNodes:
             # Retrieve memory from the memory database
             memory_response = requests.get(
                 f"{GraphNodes._config.memory_base_url}/user/{state.user_id}/context",
+                headers={"Authorization": state.authorization},
                 timeout=10
             )
             memory_response.raise_for_status()
@@ -49,6 +50,7 @@ class GraphNodes:
             semantic_response = requests.get(
                 f"{GraphNodes._config.memory_base_url}/user/{state.user_id}/memory",
                 params={"query": state.query},
+                headers={"Authorization": state.authorization},
                 timeout=3,
             )
             semantic_response.raise_for_status()
@@ -57,12 +59,14 @@ class GraphNodes:
             # Retrieve cart from the memory database
             cart_response = requests.get(
                 f"{GraphNodes._config.memory_base_url}/user/{state.user_id}/cart",
+                headers={"Authorization": state.authorization},
                 timeout=10
             )
             cart_response.raise_for_status()
             cart = cart_response.json()
             orders_response = requests.get(
                 f"{GraphNodes._config.memory_base_url}/user/{state.user_id}/orders",
+                headers={"Authorization": state.authorization},
                 timeout=10
             )
             orders_response.raise_for_status()
@@ -109,6 +113,7 @@ class GraphNodes:
             response = requests.post(
                 f"{GraphNodes._config.safety_base_url}/safety/input/check",
                 json={"user_id": state.user_id, "query": state.query},
+                headers={"Authorization": state.authorization},
                 timeout=10
             )
             response.raise_for_status()
@@ -172,6 +177,7 @@ class GraphNodes:
             response = requests.post(
                 f"{GraphNodes._config.safety_base_url}/safety/output/check",
                 json={"user_id": state.user_id, "query": state.response},
+                headers={"Authorization": state.authorization},
                 timeout=10
             )
             response.raise_for_status()

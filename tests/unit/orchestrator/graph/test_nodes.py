@@ -62,8 +62,8 @@ def install_config(monkeypatch: pytest.MonkeyPatch, base_config) -> SimpleNamesp
 def http_recorder(monkeypatch: pytest.MonkeyPatch) -> _HttpRecorder:
     recorder = _HttpRecorder()
 
-    def _fake_get(url: str, timeout: int = 10, **_: Any):
-        recorder.gets.append({"url": url, "timeout": timeout})
+    def _fake_get(url: str, timeout: int = 10, **kwargs: Any):
+        recorder.gets.append({"url": url, "timeout": timeout, **kwargs})
         if url.endswith("/context"):
             return _FakeResponse({"context": "prior chat"})
         if url.endswith("/memory"):
@@ -83,8 +83,8 @@ def http_recorder(monkeypatch: pytest.MonkeyPatch) -> _HttpRecorder:
             )
         return _FakeResponse({})
 
-    def _fake_post(url: str, json: Dict[str, Any], timeout: int = 10, **_: Any):
-        recorder.posts.append({"url": url, "json": json, "timeout": timeout})
+    def _fake_post(url: str, json: Dict[str, Any], timeout: int = 10, **kwargs: Any):
+        recorder.posts.append({"url": url, "json": json, "timeout": timeout, **kwargs})
         if url.endswith("/safety/input/check"):
             # Echo query back → is_safe True.
             return _FakeResponse(
@@ -110,7 +110,7 @@ class TestGetMemory:
     async def test_populates_context_and_cart_on_success(
         self, install_config, http_recorder: _HttpRecorder
     ) -> None:
-        state = State(user_id=42, query="hi")
+        state = State(user_id=42, query="hi", authorization="Bearer memory-token")
 
         result = await GraphNodes.get_memory(state)
 
@@ -122,6 +122,7 @@ class TestGetMemory:
         assert "memory" in result.timings
 
         urls = [call["url"] for call in http_recorder.gets]
+        assert all(call["headers"]["Authorization"] == "Bearer memory-token" for call in http_recorder.gets)
         assert any(u.endswith("/user/42/context") for u in urls)
         assert any(u.endswith("/user/42/cart") for u in urls)
         assert any(u.endswith("/user/42/orders") for u in urls)

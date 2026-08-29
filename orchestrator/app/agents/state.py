@@ -70,6 +70,12 @@ class State(BaseModel):
         timings: Performance timing information
     """
     user_id: int = Field(..., description="Unique user identifier")
+    authorization: Optional[str] = Field(
+        default=None,
+        exclude=True,
+        representation=False,
+        description="Authorization header forwarded to protected services",
+    )
     session_id: Optional[int] = Field(default=None, description="Chat session identifier")
     query: str = Field(..., description="User's input query")
     context: str = Field(default="", description="Previous conversation context")

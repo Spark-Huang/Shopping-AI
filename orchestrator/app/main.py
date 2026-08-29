@@ -131,10 +131,13 @@ def _persist_timings(
         logger.warning(f"orchestrator | could not persist query timing: {exc}")
 
 
-def create_initial_state(request: QueryRequest) -> State:
+def create_initial_state(
+    request: QueryRequest, authorization: Optional[str] = None
+) -> State:
     """Create initial state from request."""
     return State(
         user_id=request.user_id,
+        authorization=authorization,
         session_id=request.session_id,
         query=request.query,
         image=request.image,
@@ -212,7 +215,7 @@ async def process_query_stream(
             request.query = "The user has submitted an image, and is looking for items from the catalog that appear similar."
         
         # Create initial state
-        state = create_initial_state(request)
+        state = create_initial_state(request, authorization)
         
         async def send_updates():
             """Generator function for streaming updates."""
@@ -235,7 +238,9 @@ async def process_query_stream(
 async def generate_session_title(request: QueryRequest, authorization: Optional[str] = Header(default=None)):
     """Generate a session title without blocking the streamed conversation."""
     require_user(request.user_id, authorization)
-    scheduled = maybe_generate_session_title(agents["summary_agent"], create_initial_state(request))
+    scheduled = maybe_generate_session_title(
+        agents["summary_agent"], create_initial_state(request, authorization)
+    )
     return {"scheduled": scheduled}
 
 @app.post("/query/timing", response_model=QueryResponse)
@@ -253,7 +258,7 @@ async def process_query_timing(
         logger.info(f"orchestrator | /query/timing | Processing timing query for user {request.user_id}: {request.query}")
         
         # Create initial state
-        state = create_initial_state(request)
+        state = create_initial_state(request, authorization)
         
         # Process query and collect timing data
         start_time_ns = time.perf_counter_ns()
@@ -293,7 +298,9 @@ def session_list(user_id: int, authorization: Optional[str] = Header(default=Non
     require_user(user_id, authorization)
     memory_url = f"{config.memory_base_url}/user/{user_id}/sessions"
     try:
-        response = requests.get(memory_url, timeout=10)
+        response = requests.get(
+            memory_url, headers={"Authorization": authorization}, timeout=10
+        )
         response.raise_for_status()
         return response.json()
     except requests.RequestException as exc:
@@ -306,7 +313,10 @@ def session_create(user_id: int, request: Dict, authorization: Optional[str] = H
     require_user(user_id, authorization)
     try:
         response = requests.post(
-            f"{config.memory_base_url}/user/{user_id}/sessions", json=request, timeout=10
+            f"{config.memory_base_url}/user/{user_id}/sessions",
+            json=request,
+            headers={"Authorization": authorization},
+            timeout=10,
         )
         response.raise_for_status()
         return response.json()
@@ -321,6 +331,7 @@ def session_messages(user_id: int, session_id: int, authorization: Optional[str]
     try:
         response = requests.get(
             f"{config.memory_base_url}/user/{user_id}/sessions/{session_id}/messages",
+            headers={"Authorization": authorization},
             timeout=10,
         )
         response.raise_for_status()
@@ -335,7 +346,9 @@ def session_delete(user_id: int, session_id: int, authorization: Optional[str] =
     require_user(user_id, authorization)
     try:
         response = requests.delete(
-            f"{config.memory_base_url}/user/{user_id}/sessions/{session_id}", timeout=10
+            f"{config.memory_base_url}/user/{user_id}/sessions/{session_id}",
+            headers={"Authorization": authorization},
+            timeout=10,
         )
         response.raise_for_status()
         return response.json()
@@ -352,7 +365,9 @@ def get_cart(user_id: int, authorization: Optional[str] = Header(default=None)):
     require_user(user_id, authorization)
     memory_url = f"{config.memory_base_url}/user/{user_id}/cart"
     try:
-        response = requests.get(memory_url, timeout=10)
+        response = requests.get(
+            memory_url, headers={"Authorization": authorization}, timeout=10
+        )
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -368,6 +383,7 @@ def add_cart_item(user_id: int, request: Dict, authorization: Optional[str] = He
         response = requests.post(
             f"{config.memory_base_url}/user/{user_id}/cart/add",
             json={**request, "idempotent": True},
+            headers={"Authorization": authorization},
             timeout=10,
         )
         response.raise_for_status()
@@ -385,6 +401,7 @@ def remove_cart_item(user_id: int, request: Dict, authorization: Optional[str] =
         response = requests.post(
             f"{config.memory_base_url}/user/{user_id}/cart/remove",
             json=request,
+            headers={"Authorization": authorization},
             timeout=10,
         )
         if response.status_code == 404:
@@ -401,7 +418,11 @@ def get_orders(user_id: int, authorization: Optional[str] = Header(default=None)
     """Read-only proxy to the memory service's manual-orders endpoint."""
     require_user(user_id, authorization)
     try:
-        response = requests.get(f"{config.memory_base_url}/user/{user_id}/orders", timeout=10)
+        response = requests.get(
+            f"{config.memory_base_url}/user/{user_id}/orders",
+            headers={"Authorization": authorization},
+            timeout=10,
+        )
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -417,6 +438,7 @@ def create_order(user_id: int, request: Dict, authorization: Optional[str] = Hea
         response = requests.post(
             f"{config.memory_base_url}/user/{user_id}/orders",
             json=request,
+            headers={"Authorization": authorization},
             timeout=10,
         )
         response.raise_for_status()
@@ -433,7 +455,9 @@ def get_context(user_id: int, authorization: Optional[str] = Header(default=None
     require_user(user_id, authorization)
     memory_url = f"{config.memory_base_url}/user/{user_id}/context"
     try:
-        response = requests.get(memory_url, timeout=10)
+        response = requests.get(
+            memory_url, headers={"Authorization": authorization}, timeout=10
+        )
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -452,6 +476,7 @@ def add_context(user_id: int, request: Dict, authorization: Optional[str] = Head
         response = requests.post(
             f"{config.memory_base_url}/user/{user_id}/context/add",
             json={"new_context": new_context},
+            headers={"Authorization": authorization},
             timeout=10,
         )
         response.raise_for_status()

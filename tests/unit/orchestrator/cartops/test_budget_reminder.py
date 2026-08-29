@@ -46,7 +46,7 @@ def test_triggered_reminder_gently_suggests_budget_when_unset(
 
     monkeypatch.setattr(
         "orchestrator.app.agents.cartops.agent.requests.get",
-        lambda url, timeout: Response(),
+        lambda url, headers, timeout: Response(),
     )
 
     result = agent._maybe_impulse_budget_note(

@@ -28,8 +28,8 @@ def _state():
 def test_llm_title_generated_after_two_turns(monkeypatch):
     calls = {}
 
-    def get(url, timeout):
-        calls["get"] = url
+    def get(url, headers, timeout):
+        calls["get"] = (url, headers)
         return Response({"messages": [{}] * 4})
 
     def create(**kwargs):
@@ -42,8 +42,8 @@ def test_llm_title_generated_after_two_turns(monkeypatch):
             ]
         )
 
-    def patch(url, json, timeout):
-        calls["patch"] = (url, json)
+    def patch(url, json, headers, timeout):
+        calls["patch"] = (url, json, headers)
         return Response({})
 
     monkeypatch.setattr("orchestrator.app.agents.session_titles.requests.get", get)
@@ -54,16 +54,19 @@ def test_llm_title_generated_after_two_turns(monkeypatch):
     )
 
     assert maybe_generate_session_title(agent, _state()) is True
-    assert calls["patch"] == ("http://memory/user/1/sessions/5", {"title": "买化妆台和衣服"})
+    assert calls["patch"][:2] == (
+        "http://memory/user/1/sessions/5",
+        {"title": "买化妆台和衣服"},
+    )
 
 
 def test_llm_failure_falls_back_to_truncated_first_message(monkeypatch):
     monkeypatch.setattr(
         "orchestrator.app.agents.session_titles.requests.get",
-        lambda url, timeout: Response({"messages": [{}] * 4}),
+        lambda url, headers, timeout: Response({"messages": [{}] * 4}),
     )
 
-    def patch(url, json, timeout):
+    def patch(url, json, headers, timeout):
         assert json == {"title": "买化妆台和衣服"}
         return Response({})
 
@@ -81,6 +84,6 @@ def test_llm_failure_falls_back_to_truncated_first_message(monkeypatch):
 def test_failure_is_contained(monkeypatch):
     monkeypatch.setattr(
         "orchestrator.app.agents.session_titles.requests.get",
-        lambda url, timeout: (_ for _ in ()).throw(RuntimeError("down")),
+        lambda url, headers, timeout: (_ for _ in ()).throw(RuntimeError("down")),
     )
     assert maybe_generate_session_title(Agent(), _state()) is False

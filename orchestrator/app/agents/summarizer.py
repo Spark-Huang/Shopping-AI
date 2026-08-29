@@ -121,6 +121,7 @@ class SummaryAgent:
             requests.post(
                 f"{self.memory_base_url}/user/{output_state.user_id}/context/replace",
                 json={"new_context": output_state.context},
+                headers={"Authorization": output_state.authorization},
                 timeout=3,
             )
             requests.post(
@@ -130,6 +131,7 @@ class SummaryAgent:
                     "response": output_state.response,
                     "session_id": output_state.session_id,
                 },
+                headers={"Authorization": output_state.authorization},
                 timeout=3,
             )
         except requests.RequestException as exc:

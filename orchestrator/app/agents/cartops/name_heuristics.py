@@ -380,9 +380,12 @@ class NameHeuristicsMixin:
             return "...\n" + tail
 
     def _update_context(self, user_id: int, context: str) -> None:
+            state = getattr(self, "state", None)
+            headers = {"Authorization": state.authorization} if state else {}
             response = requests.post(
                 f"{self.memory_url}/user/{user_id}/context/add",
-                json={"new_context": context}
+                json={"new_context": context},
+                headers=headers,
             )
             if response.status_code != 200:
                 logging.error(f"Failed to update context: {response.text}")

@@ -782,12 +782,12 @@ def _install_http_stubs(
         # The search service's /query/text is the only session.post target.
         return _FakeResponse(catalog_response)
 
-    def _fake_requests_get(url: str, timeout: int = 10):
+    def _fake_requests_get(url: str, headers: Dict[str, str] | None = None, timeout: int = 10):
         recorder.calls.append(("GET", url, {}))
         cart_state = cart_before if cart_before is not None else []
         return _FakeResponse({"cart": cart_state})
 
-    def _fake_requests_post(url: str, json: Dict[str, Any], timeout: int = 10):
+    def _fake_requests_post(url: str, json: Dict[str, Any], headers: Dict[str, str] | None = None, timeout: int = 10):
         recorder.calls.append(("POST", url, json))
         # Which memory endpoint is being invoked?
         if url.endswith("/cart/add"):
@@ -809,7 +809,7 @@ def _install_http_stubs(
         # "after" state on the single GET path. Tests that care about state
         # toggling between GETs swap in their own implementation via
         # ``monkeypatch``.
-        def _fake_requests_get_after(url: str, timeout: int = 10):  # noqa: ARG001
+        def _fake_requests_get_after(url: str, headers: Dict[str, str] | None = None, timeout: int = 10):  # noqa: ARG001
             recorder.calls.append(("GET", url, {}))
             return _FakeResponse({"cart": cart_after})
 
@@ -1234,11 +1234,11 @@ def _install_bulk_http_stubs(
     def _fake_session_ctor() -> _FakeSession:
         return _FakeSession()
 
-    def _fake_requests_get(url: str, timeout: int = 10):  # noqa: ARG001
+    def _fake_requests_get(url: str, headers: Dict[str, str] | None = None, timeout: int = 10):  # noqa: ARG001
         recorder.calls.append(("GET", url, {}))
         return _FakeResponse({"cart": cart_after or []})
 
-    def _fake_requests_post(url: str, json: Dict[str, Any], timeout: int = 10):  # noqa: ARG001
+    def _fake_requests_post(url: str, json: Dict[str, Any], headers: Dict[str, str] | None = None, timeout: int = 10):  # noqa: ARG001
         recorder.calls.append(("POST", url, json))
         if url.endswith("/cart/add"):
             item = json.get("item", "item")

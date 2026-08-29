@@ -43,6 +43,7 @@ def _persist_session_title(agent, state: State, title: str) -> None:
     response = requests.patch(
         f"{agent.memory_base_url}/user/{state.user_id}/sessions/{state.session_id}",
         json={"title": title},
+        headers={"Authorization": state.authorization},
         timeout=3,
     )
     response.raise_for_status()
@@ -55,6 +56,7 @@ def maybe_generate_session_title(agent, state: State) -> bool:
     try:
         response = requests.get(
             f"{agent.memory_base_url}/user/{state.user_id}/sessions/{state.session_id}/messages",
+            headers={"Authorization": state.authorization},
             timeout=2,
         )
         response.raise_for_status()

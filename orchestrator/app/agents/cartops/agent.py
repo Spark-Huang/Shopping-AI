@@ -75,6 +75,7 @@ class CartAgent(ReferenceResolutionMixin, CatalogMatchMixin, MemoryClientMixin):
             """
             start = time.monotonic()
             logging.info(f"CartAgent.invoke() | Starting with query: {state.query}")
+            self.state = state
             tools = [
                 add_to_cart_function,
                 remove_from_cart_function,
@@ -388,8 +389,12 @@ class CartAgent(ReferenceResolutionMixin, CatalogMatchMixin, MemoryClientMixin):
 
     def _get_context_for_impulse_note(self, user_id: int) -> str:
         try:
+            state = getattr(self, "state", None)
+            headers = {"Authorization": state.authorization} if state else {}
             response = requests.get(
-                f"{self.memory_base_url}/user/{user_id}/context", timeout=10
+                f"{self.memory_base_url}/user/{user_id}/context",
+                headers=headers,
+                timeout=10,
             )
             response.raise_for_status()
             return response.json().get("context", "")
