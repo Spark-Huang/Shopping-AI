@@ -343,67 +343,85 @@ class TestProxyEndpoints:
         assert recorded["url"].endswith("/user/1/checkout")
         assert recorded["json"] == body
 
-    def test_products_serves_csv_filtered_by_category(
-        self, main_module, monkeypatch: pytest.MonkeyPatch, tmp_path
+    def test_products_serves_milvus_discovery_catalog(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        csv_path = tmp_path / "products.csv"
-        csv_path.write_text(
-            "\n".join(
-                [
-                    '"category","subcategory","name","description","url","price","image","story"',
-                    '"guizhou","ethnic-wear","苗绣披肩","手工苗绣披肩","https://example.com/s1","158","/images/products/guizhou/miao-embroidered-shawl.png","苗绣故事"',
-                    '"guizhou","food","老干妈油辣椒","贵州风味辣酱","https://example.com/s2","9","/images/products/guizhou/chili.jpg","辣椒故事"',
-                    '"other","misc","外部商品","不在贵州目录","https://example.com/s3","10","",""',
-                ]
-            ),
-            encoding="utf-8",
+        rows = [
+            {
+                "name": "苗族长款流苏耳饰",
+                "description": "苗银手工耳饰",
+                "url": "https://example.com/s1",
+                "price": 35.5,
+                "currency": "CNY",
+                "image": "https://example.com/s1.jpg",
+                "subcategory": "苗银",
+            },
+            {
+                "name": "通用商品",
+                "description": "非发现页商品",
+                "url": "https://example.com/other",
+                "price": 10,
+                "currency": "CNY",
+                "image": "https://example.com/other.jpg",
+                "subcategory": "other",
+            },
+        ]
+        monkeypatch.setattr(
+            main_module, "_list_products_from_milvus", lambda: rows[:1]
         )
-        monkeypatch.setattr(main_module, "PRODUCTS_CSV", csv_path)
 
         response = main_module.list_products(category="guizhou")
         products = response["products"]
 
-        assert len(products) == 2
-        assert all(p["category"] == "guizhou" for p in products)
+        assert len(products) == 1
         by_name = {p["name"]: p for p in products}
-        assert by_name["老干妈油辣椒"]["price"] == 9
-        assert by_name["老干妈油辣椒"]["subcategory"] == "food"
-        assert by_name["苗绣披肩"]["subcategory"] == "ethnic-wear"
-        assert by_name["苗绣披肩"]["image"] == (
-            "/images/products/guizhou/miao-embroidered-shawl.png"
-        )
-        # Cultural stories ride along for the showcase page and agent.
-        assert "苗绣" in by_name["苗绣披肩"]["story"]
+        assert by_name["苗族长款流苏耳饰"]["price"] == 35.5
+        assert by_name["苗族长款流苏耳饰"]["currency"] == "CNY"
+        assert by_name["苗族长款流苏耳饰"]["subcategory"] == "苗银"
 
-    def test_products_without_category_returns_whole_catalog(
-        self, main_module, monkeypatch: pytest.MonkeyPatch, tmp_path
+    @pytest.mark.parametrize(
+        "name,expected",
+        [
+            ("茅台酒图志", False),
+            ("老干妈 著", False),
+            ("苗族长款流苏耳饰", True),
+        ],
+    )
+    def test_products_excludes_book_like_names(
+        self, main_module, name: str, expected: bool
     ) -> None:
-        csv_path = tmp_path / "products.csv"
-        csv_path.write_text(
-            "\n".join(
-                [
-                    '"category","subcategory","name","description","url","price","image","story"',
-                    '"guizhou","ethnic-wear","苗绣披肩","手工苗绣披肩","https://example.com/s1","158","/images/products/guizhou/miao-embroidered-shawl.png","苗绣故事"',
-                ]
-            ),
-            encoding="utf-8",
-        )
-        monkeypatch.setattr(main_module, "PRODUCTS_CSV", csv_path)
+        row = {
+            "name": name,
+            "image": "https://example.com/image.jpg",
+            "subcategory": "苗银",
+        }
 
-        response = main_module.list_products(category=None)
+        assert main_module._is_discovery_product(row) is expected
+
+    def test_products_rejects_non_guizhou_category(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        called = False
+
+        def _catalog() -> list:
+            nonlocal called
+            called = True
+            return []
+
+        monkeypatch.setattr(main_module, "_list_products_from_milvus", _catalog)
+        response = main_module.list_products(category="other")
         products = response["products"]
 
-        assert len(products) == 1
-        categories = {p["category"] for p in products}
-        assert categories == {"guizhou"}
-        assert all(product["sourceUrl"] for product in products)
-        assert all(product["verifiedAt"] for product in products)
+        assert products == []
+        assert called is False
 
-    def test_products_returns_empty_list_when_catalog_csv_missing(
-        self, main_module, monkeypatch: pytest.MonkeyPatch, tmp_path
+    def test_products_returns_empty_list_when_milvus_unavailable(
+        self, main_module, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Until crawler data lands, a missing CSV degrades to an empty catalog."""
-        monkeypatch.setattr(main_module, "PRODUCTS_CSV", tmp_path / "absent.csv")
+        def _catalog() -> list:
+            raise ConnectionError("Milvus unavailable")
+
+        monkeypatch.setattr(main_module, "_list_products_from_milvus", _catalog)
 
         response = main_module.list_products(category="guizhou")
 

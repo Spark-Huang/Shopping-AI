@@ -9,9 +9,8 @@ from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field as PydanticField
-from typing import Optional, Dict, List
+from typing import Any, Optional, Dict, List
 from pathlib import Path
-import csv
 import logging
 import os
 import sys
@@ -62,7 +61,43 @@ def _products_csv_path() -> Path:
     return Path(__file__).resolve().parents[2] / "platform" / "data" / "products.csv"
 
 
-PRODUCTS_CSV = _products_csv_path()
+MILVUS_HOST = os.getenv("MILVUS_HOST", "localhost")
+MILVUS_PORT = os.getenv("MILVUS_PORT", "19530")
+MILVUS_COLLECTION = os.getenv("MILVUS_COLLECTION", "shopping_ai_v2")
+MILVUS_PRODUCT_ALIAS = "shopping_ai_products"
+
+GUIZHOU_SUBCATEGORIES = {
+    "酱香白酒",
+    "苗银",
+    "蜡染",
+    "苗绣",
+    "地方小吃",
+    "调味酱",
+    "酸汤底料",
+    "刺梨饮品",
+    "刺梨食品",
+    "牛肉干",
+    "波波糖",
+    "折耳根食品",
+    "董酒",
+    "青酒",
+    "贵州安酒",
+    "都匀毛尖",
+    "湖潭翠芽",
+    "贵州绿宝石茶",
+    "凤冈锌硒茶",
+    "普安红茶",
+}
+BOOK_NAME_MARKERS = (
+    "出版社",
+    "著",
+    "编",
+    "修订版",
+    "全集",
+    "口述史",
+    "图志",
+    "年鉴",
+)
 
 
 def initialize_agents(config) -> Dict:
@@ -535,55 +570,91 @@ def checkout_cart(user_id: int, request: Dict, authorization: Optional[str] = He
 
 @app.get("/products")
 def list_products(category: Optional[str] = Query(default=None)):
-    """Serve catalog products straight from the shared CSV, optionally filtered by category.
+    """Serve image-backed Guizhou products from Milvus.
 
-    Guikelai is Guizhou-only. The optional category parameter remains for API
-    compatibility, but non-Guizhou records are never exposed.
+    The discovery catalog excludes the general "other" pool and Dangdang
+    book-like records, neither of which belongs in the showcase experience.
     """
-    if not PRODUCTS_CSV.exists():
-        logger.warning(
-            f"orchestrator | /products | catalog CSV not found at {PRODUCTS_CSV}; "
-            "returning empty catalog until crawler data lands"
-        )
+    if category and category.strip().lower() != "guizhou":
+        return {"products": []}
+    try:
+        return {"products": _list_products_from_milvus()}
+    except Exception as e:
+        logger.warning(f"orchestrator | /products | catalog unavailable: {e}")
         return {"products": []}
 
-    products = []
+
+def _is_discovery_product(row: dict[str, Any]) -> bool:
+    name = str(row.get("name") or "").strip()
+    subcategory = str(row.get("subcategory") or "").strip()
+    image = str(row.get("image") or "").strip()
+    return (
+        bool(name)
+        and bool(image)
+        and subcategory in GUIZHOU_SUBCATEGORIES
+        and not any(marker in name for marker in BOOK_NAME_MARKERS)
+    )
+
+
+def _list_products_from_milvus() -> list[dict[str, Any]]:
     try:
-        with open(PRODUCTS_CSV, newline="", encoding="utf-8") as f:
-            for row in csv.DictReader(f):
-                if (row.get("category") or "").strip().lower() != "guizhou":
-                    continue
-                if category and (row.get("category") or "").strip().lower() != category.strip().lower():
-                    continue
-                try:
-                    price = float(row.get("price") or 0)
-                except ValueError:
-                    price = 0.0
-                products.append({
-                    "category": (row.get("category") or "").strip(),
-                    "subcategory": (row.get("subcategory") or "").strip(),
-                    "name": (row.get("name") or "").strip(),
-                    "description": (row.get("description") or "").strip(),
-                    "url": (row.get("url") or "").strip(),
-                    "price": price,
-                    "image": (row.get("image") or "").strip(),
-                    "story": (row.get("story") or "").strip(),
-                    "sourceName": "贵州省文旅与市场监管公开资料",
-                    "sourceUrl": (
-                        "https://www.mct.gov.cn/whzx/qgwhxxlb/gz/201811/"
-                        "t20181129_836276.htm"
-                        if (row.get("subcategory") or "").strip()
-                        in {"ethnic-wear", "craft"}
-                        else "https://nynct.guizhou.gov.cn/zwgk/xxgkml/snwwj/"
-                        "qnbf/201801/t20180117_25102640.html"
-                    ),
-                    "verifiedAt": "2026-08-29",
-                    "imageType": "illustration",
-                })
-    except OSError as e:
-        logger.error(f"orchestrator | /products | failed reading {PRODUCTS_CSV}: {e}")
-        raise HTTPException(status_code=500, detail="Product catalog unavailable")
-    return {"products": products}
+        from pymilvus import Collection, connections
+
+        if not connections.has_connection(MILVUS_PRODUCT_ALIAS):
+            connections.connect(
+                alias=MILVUS_PRODUCT_ALIAS,
+                host=MILVUS_HOST,
+                port=MILVUS_PORT,
+            )
+        collection = Collection(
+            MILVUS_COLLECTION,
+            using=MILVUS_PRODUCT_ALIAS,
+        )
+        collection.load()
+        quoted_subcategories = ",".join(
+            f'"{subcategory}"' for subcategory in sorted(GUIZHOU_SUBCATEGORIES)
+        )
+        rows = collection.query(
+            expr=f'subcategory in [{quoted_subcategories}] && image != ""',
+            output_fields=[
+                "name",
+                "description",
+                "url",
+                "image",
+                "price",
+                "currency",
+                "subcategory",
+            ],
+            limit=1000,
+        )
+    except Exception as e:
+        logger.warning(
+            "orchestrator | /products | Milvus catalog unavailable; "
+            f"returning empty catalog: {e}"
+        )
+        return []
+
+    products = []
+    seen = set()
+    for row in rows:
+        if not _is_discovery_product(row):
+            continue
+        identity = (row.get("name"), row.get("url"))
+        if identity in seen:
+            continue
+        seen.add(identity)
+        products.append({
+            "category": "guizhou",
+            "subcategory": row.get("subcategory") or "",
+            "name": row.get("name") or "",
+            "description": row.get("description") or "",
+            "url": row.get("url") or "",
+            "price": float(row.get("price") or 0),
+            "currency": row.get("currency") or "CNY",
+            "image": row.get("image") or "",
+        })
+    products.sort(key=lambda product: (product["subcategory"], product["name"]))
+    return products
 
 
 @app.get("/orders/{user_id}")

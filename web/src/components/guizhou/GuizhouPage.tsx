@@ -38,6 +38,43 @@ type LoadState = "loading" | "ready" | "error";
 
 type FilterKey = "all" | "ethnic-wear" | "craft" | "food" | "drink";
 
+export const FILTER_SUBCATEGORIES: Record<
+  Exclude<FilterKey, "all">,
+  string[]
+> = {
+  "ethnic-wear": ["苗银", "蜡染", "苗绣"],
+  craft: ["苗银", "蜡染", "苗绣"],
+  food: [
+    "地方小吃",
+    "调味酱",
+    "酸汤底料",
+    "刺梨饮品",
+    "刺梨食品",
+    "牛肉干",
+    "波波糖",
+    "折耳根食品",
+  ],
+  drink: [
+    "酱香白酒",
+    "董酒",
+    "青酒",
+    "贵州安酒",
+    "都匀毛尖",
+    "湖潭翠芽",
+    "贵州绿宝石茶",
+    "凤冈锌硒茶",
+    "普安红茶",
+  ],
+};
+
+function productMatchesFilter(
+  product: CatalogProduct,
+  filter: FilterKey
+): boolean {
+  if (filter === "all") return true;
+  return FILTER_SUBCATEGORIES[filter].includes(product.subcategory);
+}
+
 /** Filter chips in display order, each paired with its culture-tour key. */
 const FILTERS: { key: FilterKey; tourKey: string }[] = [
   { key: "all", tourKey: "overview" },
@@ -201,7 +238,7 @@ const GuizhouPage: React.FC<GuizhouPageProps> = ({ onCartChange, onTourStart }) 
     const pool =
       filter === "all"
         ? products
-        : products.filter((product) => product.subcategory === filter);
+        : products.filter((product) => productMatchesFilter(product, filter));
     const generated = shuffleWithSeed(pool, Date.now()).slice(0, 6);
     setAiProducts(generated);
     setInspirationPulse(true);
@@ -221,7 +258,7 @@ const GuizhouPage: React.FC<GuizhouPageProps> = ({ onCartChange, onTourStart }) 
   const batch = useMemo(() => {
     if (filter === "all") return shuffled.slice(0, GRID_BATCH_SIZE);
     return shuffleWithSeed(
-      products.filter((p) => p.subcategory === filter),
+      products.filter((product) => productMatchesFilter(product, filter)),
       shuffleSeed
     ).slice(0, GRID_BATCH_SIZE);
   }, [products, filter, shuffleSeed, shuffled]);
