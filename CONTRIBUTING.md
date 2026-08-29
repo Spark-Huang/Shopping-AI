@@ -1,6 +1,6 @@
-# Contributing to Shopping AI
+# Contributing to 贵客来
 
-Thanks for helping improve Shopping AI.
+Thanks for helping improve 贵客来, the Guizhou specialty shopping agent.
 
 ## Setup
 
@@ -32,4 +32,4 @@ npm --prefix web install
 
 ## Catalog Data
 
-Product records in `platform/data/products.csv` must be neutral, non-promotional, and suitable for redistribution. Preserve the required schema, keep image references local, and avoid brand-specific or unverifiable claims.
+Product records in `platform/data/products.csv` must describe real Guizhou product categories, remain neutral and suitable for redistribution. Preserve the schema, keep image references local, cite authoritative category sources in `docs/catalog-sources.md`, label reference prices and illustrations honestly, and never add fabricated reviews or merchant claims.

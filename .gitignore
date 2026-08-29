@@ -29,6 +29,11 @@ traces/
 .cognee_data/
 .cognee_system/
 
+# Local debug leftovers / personal tooling
+tmp_*
+tmp*.txt
+.codex/
+
 # Env and local overrides
 .env
 config-local.yaml
