@@ -70,7 +70,7 @@ except Exception as e:
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Shopping AI API",
+    title="Guikela API",
     description="AI-powered shopping assistant with multi-service architecture",
     version="1.0.0"
 )
@@ -281,6 +281,45 @@ def freshness_set(request: Dict, authorization: Optional[str] = Header(default=N
     except requests.RequestException as exc:
         logger.error("orchestrator | /config/freshness | search service call failed: %s", exc)
         raise HTTPException(status_code=502, detail="Failed to save data freshness")
+
+
+@app.get("/config/region")
+def region_get(authorization: Optional[str] = Header(default=None)):
+    """Read the shopping-region setting from the search service."""
+    try:
+        response = requests.get(
+            f"{config.retriever_port}/config/region",
+            headers={"Authorization": authorization},
+            timeout=10,
+        )
+        if response.status_code >= 400:
+            detail = response.json().get("detail", "Invalid region setting")
+            raise HTTPException(status_code=response.status_code, detail=detail)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as exc:
+        logger.error("orchestrator | /config/region | search service call failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Failed to fetch region")
+
+
+@app.post("/config/region")
+def region_set(request: Dict, authorization: Optional[str] = Header(default=None)):
+    """Save the shopping-region setting through the search service."""
+    try:
+        response = requests.post(
+            f"{config.retriever_port}/config/region",
+            json=request,
+            headers={"Authorization": authorization},
+            timeout=10,
+        )
+        if response.status_code >= 400:
+            detail = response.json().get("detail", "Invalid region setting")
+            raise HTTPException(status_code=response.status_code, detail=detail)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as exc:
+        logger.error("orchestrator | /config/region | search service call failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Failed to save region")
 
 @app.post("/query/timing", response_model=QueryResponse)
 async def process_query_timing(
@@ -538,7 +577,7 @@ async def health_check():
 async def root():
     """Root endpoint with API information."""
     return {
-        "message": "Shopping AI API",
+        "message": "Guikela API",
         "version": "1.0.0",
         "endpoints": {
             "auth": "/auth/{register,login,me}",

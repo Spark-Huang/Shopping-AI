@@ -86,4 +86,36 @@ describe("Me page safety toggle", () => {
       })
     );
   });
+
+  it("loads the default shopping region and saves a new selection", async () => {
+    fetchMock.mockReset();
+    const savedRegions: string[] = [];
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/config/region")) {
+        if (init?.method === "POST") {
+          savedRegions.push(JSON.parse(String(init.body)).region);
+        }
+        return { ok: true, json: async () => ({ region: "四川" }) };
+      }
+      if (url.endsWith("/config/freshness")) {
+        return { ok: true, json: async () => ({ data_freshness_hours: 24 }) };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    render(<MePage safetyEnabled={true} onSafetyChange={vi.fn()} />);
+
+    expect(await screen.findByTestId("me-region")).toBeTruthy();
+    expect(screen.getByLabelText("Shopping region")).toHaveProperty(
+      "value",
+      "四川"
+    );
+    fireEvent.change(screen.getByLabelText("Shopping region"), {
+      target: { value: "四川" },
+    });
+
+    await waitFor(() => expect(screen.getAllByText("四川").length).toBeGreaterThan(1));
+    expect(savedRegions).toEqual(["四川"]);
+  });
 });

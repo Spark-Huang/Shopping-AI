@@ -157,7 +157,7 @@ class TestHealthAndRoot:
         assert response.status_code == 200
 
         body = response.json()
-        assert body["message"] == "Shopping AI API"
+        assert body["message"] == "Guikela API"
         assert body["version"] == "1.0.0"
         assert "query" not in body["endpoints"]
         for key in ["stream", "timing", "cart", "orders", "context", "health", "docs"]:

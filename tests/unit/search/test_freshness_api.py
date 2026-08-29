@@ -20,6 +20,8 @@ def api_client(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[TestClient]:
     monkeypatch.setenv("DATA_FRESHNESS_FILE", str(tmp_path / "freshness"))
+    monkeypatch.setenv("REGION_FILE", str(tmp_path / "region"))
+    monkeypatch.delenv("SHOPPING_REGION", raising=False)
     monkeypatch.delenv("DATA_FRESHNESS_HOURS", raising=False)
 
     config = {
@@ -73,4 +75,18 @@ def test_freshness_api_reads_writes_and_rejects_invalid_values(api_client):
     ).status_code == 422
     assert api_client.post(
         "/config/freshness", json={"data_freshness_hours": "invalid"}
+    ).status_code == 422
+
+
+def test_region_api_reads_writes_and_rejects_invalid_values(api_client):
+    response = api_client.get("/config/region")
+    assert response.status_code == 200
+    assert response.json() == {"region": "贵州"}
+
+    response = api_client.post("/config/region", json={"region": "四川"})
+    assert response.status_code == 200
+    assert response.json() == {"region": "四川"}
+    assert api_client.get("/config/region").json() == {"region": "四川"}
+    assert api_client.post(
+        "/config/region", json={"region": "Invalid region"}
     ).status_code == 422

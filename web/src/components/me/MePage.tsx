@@ -21,6 +21,11 @@ import { setAppLanguage, type AppLang } from "../../i18n";
 import OrdersPage from "../orders/OrdersPage";
 import { addContext, fetchHistory } from "../../api/historyApi";
 import { fetchFreshness, saveFreshness } from "../../api/freshnessApi";
+import {
+  fetchRegion,
+  saveRegion,
+  SHOPPING_REGIONS,
+} from "../../api/regionApi";
 import { markPurchased } from "../../api/ordersApi";
 import { getOrCreateUserId } from "../../lib/identity";
 import { getAuthUser } from "../../lib/auth";
@@ -63,6 +68,7 @@ const MePage: React.FC<MePageProps> = ({
   );
   const [budget, setBudget] = useState<number | null>(null);
   const [freshnessHours, setFreshnessHours] = useState<number | null>(null);
+  const [region, setRegion] = useState<string>("贵州");
 
   const loadBudget = useCallback(async () => {
     const history = await fetchHistory(getOrCreateUserId());
@@ -72,6 +78,11 @@ const MePage: React.FC<MePageProps> = ({
   const loadFreshness = useCallback(async () => {
     const setting = await fetchFreshness();
     setFreshnessHours(setting.data_freshness_hours);
+  }, []);
+
+  const loadRegion = useCallback(async () => {
+    const setting = await fetchRegion();
+    setRegion(setting.region);
   }, []);
 
   useEffect(() => {
@@ -85,6 +96,12 @@ const MePage: React.FC<MePageProps> = ({
       console.error("MePage: failed to load data freshness", error);
     });
   }, [loadFreshness]);
+
+  useEffect(() => {
+    void loadRegion().catch((error) => {
+      console.error("MePage: failed to load shopping region", error);
+    });
+  }, [loadRegion]);
 
   useEffect(() => {
     const syncFavorites = () => setFavorites(readFavorites());
@@ -145,6 +162,20 @@ const MePage: React.FC<MePageProps> = ({
     } catch (error) {
       console.error("MePage: failed to save data freshness", error);
       toast.error(t("me.freshnessSaveFailed"));
+    }
+  };
+
+  const saveShoppingRegion = async (
+    event: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const nextRegion = event.target.value;
+    try {
+      const setting = await saveRegion(nextRegion);
+      setRegion(setting.region);
+      toast.success(t("me.regionSaved", { region: setting.region }));
+    } catch (error) {
+      console.error("MePage: failed to save shopping region", error);
+      toast.error(t("me.regionSaveFailed"));
     }
   };
 
@@ -260,7 +291,7 @@ const MePage: React.FC<MePageProps> = ({
       {/* Brand */}
       <div className="me-page__brand">
         <span className="me-page__brand-dot" aria-hidden="true" />
-        <h4 className="me-page__brand-name">Shopping AI</h4>
+        <h4 className="me-page__brand-name">Guikela</h4>
       </div>
 
       {/* Account row: current user + sign out */}
@@ -355,6 +386,28 @@ const MePage: React.FC<MePageProps> = ({
             placeholder={t("me.freshnessPlaceholder")}
           />
           <button type="submit">{t("me.saveFreshness")}</button>
+        </form>
+      </div>
+
+      <div className="me-page__budget" data-testid="me-region">
+        <div className="me-page__row">
+          <span className="me-page__row-label">{t("me.region")}</span>
+          <span className="me-page__row-value">{region}</span>
+        </div>
+        <p className="me-page__row-hint">{t("me.regionHint")}</p>
+        <form className="me-page__budget-form">
+          <select
+            name="region"
+            value={region}
+            onChange={saveShoppingRegion}
+            aria-label={t("me.regionLabel")}
+          >
+            {SHOPPING_REGIONS.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
         </form>
       </div>
 

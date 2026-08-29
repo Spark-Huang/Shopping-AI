@@ -415,7 +415,8 @@ li {
   margin: -4px 0 12px;
 }
 
-.me-page__budget-form input {
+.me-page__budget-form input,
+.me-page__budget-form select {
   width: 104px;
   padding: 7px 9px;
   border: 1px solid var(--glass-border);
@@ -425,6 +426,10 @@ li {
   backdrop-filter: blur(16px) saturate(130%);
   -webkit-backdrop-filter: blur(16px) saturate(130%);
   font-size: 13px;
+}
+
+.me-page__budget-form select {
+  width: 128px;
 }
 
 .me-page__budget-form button {

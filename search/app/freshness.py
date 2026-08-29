@@ -95,10 +95,12 @@ class FreshnessService:
             for record in records
         )
 
-    def refresh(self, keyword: str) -> tuple[list[dict[str, Any]], bool]:
+    def refresh(
+        self, keyword: str, region: str = "贵州"
+    ) -> tuple[list[dict[str, Any]], bool]:
         try:
             crawled_at = utc_now()
-            products = self.crawler.crawl(keyword)
+            products = self.crawler.crawl(keyword, region)
             if not products:
                 raise CrawlError("external catalog returned no products")
             return [product.metadata(crawled_at) for product in products], True

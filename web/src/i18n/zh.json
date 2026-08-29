@@ -1,5 +1,5 @@
 {
-  "documentTitle": "Shopping AI",
+  "documentTitle": "贵客来",
   "footer": {
     "contactUs": "联系我们",
     "guidelines": "指南与常见问题",
@@ -11,7 +11,7 @@
     "me": "我的"
   },
   "chatbox": {
-    "title": "Shopping AI",
+    "title": "贵客来",
     "placeholder": "输入你想找的商品…",
     "sendLabel": "发送消息",
     "resetLabel": "重置对话",
@@ -67,7 +67,7 @@
     "movedToOrders": "已移入订单 ✓",
     "syncFailed": "订单已记录，但购物车更新失败。请稍后再试移除。",
     "shareList": "分享我的清单",
-    "shareText": "我的 Symy 购物清单",
+    "shareText": "我的贵客来购物清单",
     "shareSlogan": "没有广告 · 没有赞助结果——我的 AI 购物助手不收商家一分钱。"
   },
   "me": {
@@ -93,6 +93,11 @@
     "freshnessInvalid": "请输入大于 0 小时的数据新鲜度。",
     "freshnessSaved": "数据新鲜度已设为 {{hours}} 小时 ✓",
     "freshnessSaveFailed": "暂时无法保存数据新鲜度。",
+    "region": "购物地",
+    "regionHint": "优先为你寻找购物地相关的商品和服务。",
+    "regionLabel": "购物地",
+    "regionSaved": "购物地已设为 {{region}} ✓",
+    "regionSaveFailed": "暂时无法保存购物地。",
     "languageToggle": "EN",
     "version": "版本",
     "orders": "订单",
@@ -118,7 +123,7 @@
   },
   "auth": {
     "title": "登录",
-    "subtitle": "登录你的 Shopping AI 账号",
+    "subtitle": "登录你的贵客来账号",
     "usernameLabel": "用户名",
     "passwordLabel": "密码",
     "loginButton": "登录",

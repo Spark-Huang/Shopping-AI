@@ -1,4 +1,4 @@
-import { config } from "../config/appConfig";
+import { config, type AppConfig } from "../config/appConfig";
 import { authFetch } from "../lib/auth";
 
 export type FreshnessConfig = { data_freshness_hours: number };

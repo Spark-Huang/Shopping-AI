@@ -1,5 +1,5 @@
 {
-  "documentTitle": "Shopping AI",
+  "documentTitle": "Guikela",
   "footer": {
     "contactUs": "Contact Us",
     "guidelines": "Guidelines & FAQ",
@@ -11,7 +11,7 @@
     "me": "Me"
   },
   "chatbox": {
-    "title": "Shopping AI",
+    "title": "Guikela",
     "placeholder": "Type something here...",
     "sendLabel": "Send message",
     "resetLabel": "Reset conversation",
@@ -67,7 +67,7 @@
     "movedToOrders": "Moved to Orders ✓",
     "syncFailed": "Order recorded, but the cart could not update. Try removing it again.",
     "shareList": "Share my list",
-    "shareText": "My Symy shopping list",
+    "shareText": "My Guikela shopping list",
     "shareSlogan": "No ads · No sponsored results — my AI shopper takes no merchant money."
   },
   "me": {
@@ -93,6 +93,11 @@
     "freshnessInvalid": "Enter a data freshness value greater than 0 hours.",
     "freshnessSaved": "Data freshness set to {{hours}} hours ✓",
     "freshnessSaveFailed": "Could not save data freshness right now.",
+    "region": "Shopping region",
+    "regionHint": "Prioritizes products and services related to your shopping region.",
+    "regionLabel": "Shopping region",
+    "regionSaved": "Shopping region set to {{region}} ✓",
+    "regionSaveFailed": "Could not save your shopping region right now.",
     "languageToggle": "中文",
     "version": "Version",
     "orders": "Orders",
@@ -118,7 +123,7 @@
   },
   "auth": {
     "title": "Sign in",
-    "subtitle": "Sign in to your Shopping AI account",
+    "subtitle": "Sign in to your Guikela account",
     "usernameLabel": "Username",
     "passwordLabel": "Password",
     "loginButton": "Sign in",

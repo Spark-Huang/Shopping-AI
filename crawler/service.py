@@ -12,8 +12,10 @@ class CrawlerService:
         self.fetcher = fetcher or Fetcher()
         self.max_pages = max(1, max_pages)
 
-    def crawl(self, keyword: str) -> list[Product]:
+    def crawl(self, keyword: str, region: str = "贵州") -> list[Product]:
         normalized = normalize_keyword(keyword)
+        if region:
+            normalized = f"{region} {normalized}"
         category = category_for(normalized)
         products: list[Product] = []
         for page in range(1, self.max_pages + 1):

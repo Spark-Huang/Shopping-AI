@@ -11,6 +11,7 @@ export interface AppConfig {
       stream: string;
       health: string;
       freshness: string;
+      region: string;
     };
   };
   features: {
@@ -39,6 +40,7 @@ const getConfig = (): AppConfig => {
         stream: '/query/stream',
         health: '/health',
         freshness: '/config/freshness',
+        region: '/config/region',
       },
     },
     features: {

@@ -24,7 +24,7 @@ const Navbar: React.FC = () => {
         <div className="status-bar__brand">
           <MenuIcon sx={{ color: "var(--text-secondary)" }} fontSize="small" />
           <span className="status-bar__brand-dot" aria-hidden="true" />
-          Shopping AI
+          Guikela
         </div>
       </div>
     </div>

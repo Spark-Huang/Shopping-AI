@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from search.app.embeddings.text import RetrieverConfig
 from search.app.engine import Retriever
 from search.app.freshness import load_freshness_hours, save_freshness_hours
+from search.app.region import load_region, save_region
 from search.app.settings import apply_endpoint_overrides, load_config_with_overrides, search_config_path
 
 
@@ -30,6 +31,10 @@ class FreshnessSettingRequest(BaseModel):
     data_freshness_hours: float = Field(gt=0)
 
 
+class RegionSettingRequest(BaseModel):
+    region: str
+
+
 async def retrieve_with_freshness(request: TextQueryRequest, image_bool: bool):
     keyword = next(
         (item for item in request.text if item.strip()),
@@ -39,7 +44,9 @@ async def retrieve_with_freshness(request: TextQueryRequest, image_bool: bool):
     should_refresh = retriever.freshness.needs_refresh(records)
     refreshed = False
     if should_refresh:
-        products, refreshed = retriever.freshness.refresh(keyword)
+        products, refreshed = retriever.freshness.refresh(
+            keyword, load_region()
+        )
         if refreshed:
             retriever.ingest_products(products)
 
@@ -105,6 +112,20 @@ async def set_freshness(request: FreshnessSettingRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     retriever.freshness.ttl_hours = saved_value
     return {"data_freshness_hours": saved_value}
+
+
+@app.get("/config/region")
+async def get_region():
+    return {"region": load_region()}
+
+
+@app.post("/config/region")
+async def set_region(request: RegionSettingRequest):
+    try:
+        saved_value = save_region(request.region)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"region": saved_value}
 
 
 @app.post("/query/text")
