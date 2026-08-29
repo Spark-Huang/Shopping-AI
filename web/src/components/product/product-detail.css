@@ -266,19 +266,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 10px;
-  border: 1px solid var(--brand-primary, #1d4ed8);
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
   border-radius: 999px;
-  background: transparent;
-  color: var(--brand-primary, #1d4ed8);
-  font-size: 12px;
+  background: var(--brand-primary, #1d4ed8);
+  color: #ffffff;
+  font-size: 13px;
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
 }
 
 .product-detail-modal__buy-link:hover {
-  background: rgba(29, 78, 216, 0.08);
+  opacity: 0.85;
 }
 
 /* Mobile: full-screen sheet. */
