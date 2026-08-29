@@ -31,9 +31,17 @@ describe("share utilities", () => {
     ],
     ["all of these exceed the stated budget", true],
     ["The item is above your stated budget.", true],
+    ["Would you like to try a different approach and widen the price range?", false],
+    ["No matching summer dresses under $150 were found.", false],
+    ["This is over budget, so I recommend not buying it.", false],
+    ["That is too expensive; skip it for now.", true],
     ["这个价格超预算，建议不买，可以考虑替代。", true],
     ["这个价格太贵了，超过我的月预算了", true],
     ["这个选择超出你的月度预算", true],
+    ["要不要换个方式试试？放宽价格范围", false],
+    ["没有找到符合条件的夏季连衣裙（$150以下）", false],
+    ["超预算了，建议不买", true],
+    ["太贵了，换一个更便宜的选择吧", true],
   ])("classifies %s as %s", (message, expected) => {
     expect(isSaysNo(message)).toBe(expected);
   });

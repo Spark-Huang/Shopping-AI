@@ -32,14 +32,17 @@ export const isSaysNo = (message: string): boolean => {
     /above\s+(?:your|the|stated)?\s*(?:monthly\s+)?[a-z\s]{0,12}budget\b/i.test(
       message
     ) ||
-    /(?:too\s+(?:expensive|much)|skip(?:ping)?\s+it)/i.test(message);
+    /too\s+(?:expensive|much)\b/i.test(message) ||
+    /\bskip(?:ping)?\s+it\b/i.test(message);
   const chinese =
     /(?:超(?:过|出).{0,6}预算|超出.*预算|超预算|预算之上|建议不买|考虑替代)/.test(
       message
     ) ||
-    /(?:太贵|不建议(?:你)?(?:现在)?(?:购买|买)|换(?:一个|个)?(?:更便宜|平价)?的?(?:选择|替代品)?)/.test(
-      message
-    );
+    /太贵/.test(message) ||
+    /不建议(?:你)?(?:现在)?(?:购买|买)/.test(message) ||
+    /换(?:一个|个)?(?:更便宜|平价|划算)的?(?:选择|替代品|选项)/.test(message) ||
+    /换更便宜的/.test(message) ||
+    /考虑平替/.test(message);
   return english || chinese;
 };
 
