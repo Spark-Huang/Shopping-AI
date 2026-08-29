@@ -115,6 +115,20 @@
   flex-shrink: 0;
 }
 
+.cart-page__item-thumb {
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+}
+
 .cart-page__item-name {
   flex: 1;
   overflow-wrap: anywhere;

@@ -1,6 +1,6 @@
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import CartPanel from "./CartPanel";
 import "../../i18n";
 
@@ -16,6 +16,11 @@ vi.mock("react-toastify", () => ({
 const ok = (body: unknown) => ({
   ok: true,
   json: async () => body,
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
 });
 
 describe("CartPanel multi-select checkout", () => {
@@ -100,6 +105,30 @@ describe("CartPanel item deletion", () => {
         body: JSON.stringify({ item: "Silk Dress", amount: 2 }),
       })
     );
+  });
+});
+
+describe("CartPanel product thumbnails", () => {
+  it("shows item images before titles and replaces failures with placeholders", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      ok({
+        cart: [
+          { item: "Silk Dress", amount: 1, price: 49.99, image: "https://example.com/dress.jpg" },
+          { item: "Lao Gan Ma Chili Crisp", amount: 1, price: 9 },
+        ],
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CartPanel refreshSignal={0} />);
+
+    const image = await screen.findByRole("img", { name: "Silk Dress" });
+    expect(image.getAttribute("loading")).toBe("lazy");
+    expect(screen.queryByRole("img", { name: "Lao Gan Ma Chili Crisp" })).toBeNull();
+
+    fireEvent.error(image);
+    expect(screen.queryByRole("img", { name: "Silk Dress" })).toBeNull();
+    expect(document.querySelectorAll(".cart-page__item-thumb")).toHaveLength(2);
   });
 });
 

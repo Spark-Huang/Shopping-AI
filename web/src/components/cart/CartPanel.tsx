@@ -23,6 +23,7 @@ import ShareIcon from "@mui/icons-material/Share";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import BrokenImageOutlinedIcon from "@mui/icons-material/BrokenImageOutlined";
 import "./cart.css";
 import {
   checkoutCart,
@@ -58,6 +59,32 @@ interface CartPanelProps {
   onCountChange?: (totalItems: number) => void;
   onOrderChange?: () => void;
 }
+
+const CartThumbnail: React.FC<{ src: string | null | undefined; alt: string }> = ({
+  src,
+  alt,
+}) => {
+  const [failed, setFailed] = React.useState(false);
+  const canRender = Boolean(src) && (src?.startsWith("http://") || src?.startsWith("https://"));
+
+  if (!canRender || failed) {
+    return (
+      <span className="cart-page__item-thumb" aria-hidden="true">
+        <BrokenImageOutlinedIcon />
+      </span>
+    );
+  }
+
+  return (
+    <img
+      className="cart-page__item-thumb"
+      src={src ?? undefined}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
+};
 
 type LoadState = "loading" | "ready" | "error";
 
@@ -266,6 +293,7 @@ const CartPanel: React.FC<CartPanelProps> = ({ refreshSignal, onCountChange, onO
                     <CheckBoxOutlineBlankIcon fontSize="small" />
                   )}
                 </button>
+                <CartThumbnail src={it.image} alt={it.item} />
                 <span className="cart-page__item-name">{it.item}</span>
                 <span className="cart-page__qty">
                   <button

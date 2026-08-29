@@ -3,6 +3,7 @@ export interface CartItemData {
   amount: number;
   price: number | null;
   url?: string | null;
+  image?: string | null;
 }
 
 export interface CartResponse {
