@@ -32,13 +32,19 @@ class Fetcher:
             trust_env=False,
         )
 
-    def fetch(self, url: str) -> str:
+    def fetch(
+        self,
+        url: str,
+        *,
+        encoding: str | None = None,
+        extra_headers: dict[str, str] | None = None,
+    ) -> str:
         for attempt in range(self.retry_count + 1):
             self._pace()
             try:
-                response = self.client.get(url)
+                response = self.client.get(url, headers=extra_headers or {})
                 response.raise_for_status()
-                response.encoding = "gbk"
+                response.encoding = encoding or response.charset_encoding or "utf-8"
                 return response.text
             except httpx.HTTPError as exc:
                 if attempt == self.retry_count:

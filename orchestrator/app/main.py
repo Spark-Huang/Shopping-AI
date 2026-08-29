@@ -87,6 +87,7 @@ GUIZHOU_SUBCATEGORIES = {
     "贵州绿宝石茶",
     "凤冈锌硒茶",
     "普安红茶",
+    "景点门票",
 }
 BOOK_NAME_MARKERS = (
     "出版社",
