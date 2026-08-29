@@ -47,6 +47,7 @@ export default defineConfig({
     host: true,
     port: Number(process.env.PORT ?? 3000),
     strictPort: true,
+    allowedHosts: true,
     // Local development: forward API calls to the orchestrator service so the
     // default '/api' base URL works without nginx or REACT_APP_API_BASE_URL.
     proxy: {
